@@ -1233,19 +1233,19 @@ func (s *StateDB) Commit(block uint64, deleteEmptyObjects bool) (common.Hash, er
 		nodes      = trienode.NewMergedNodeSet()
 		incomplete map[common.Address]struct{}
 	)
-	if s.stateRoot = s.StateIntermediateRoot(); s.expectedRoot != s.stateRoot {
-		s.expectedRoot = s.stateRoot
-		//log.Error("Invalid merkle root", "remote", s.expectedRoot, "local", s.stateRoot)
-		//return fmt.Errorf("invalid merkle root (remote: %x local: %x)", s.expectedRoot, s.stateRoot)
-	}
+	//if s.stateRoot = s.StateIntermediateRoot(); s.expectedRoot != s.stateRoot {
+	//	s.expectedRoot = s.stateRoot
+	//	//log.Error("Invalid merkle root", "remote", s.expectedRoot, "local", s.stateRoot)
+	//	//return fmt.Errorf("invalid merkle root (remote: %x local: %x)", s.expectedRoot, s.stateRoot)
+	//}
 	commmitTrie := func() error {
 		if metrics.EnabledExpensive {
 			defer func(start time.Time) { s.TrieAllCommits += time.Since(start) }(time.Now())
 		}
-		//if s.stateRoot = s.StateIntermediateRoot(); s.expectedRoot != s.stateRoot {
-		//	log.Error("Invalid merkle root", "remote", s.expectedRoot, "local", s.stateRoot)
-		//	return fmt.Errorf("invalid merkle root (remote: %x local: %x)", s.expectedRoot, s.stateRoot)
-		//}
+		if s.stateRoot = s.StateIntermediateRoot(); s.expectedRoot != s.stateRoot {
+			log.Error("Invalid merkle root", "remote", s.expectedRoot, "local", s.stateRoot)
+			return fmt.Errorf("invalid merkle root (remote: %x local: %x)", s.expectedRoot, s.stateRoot)
+		}
 
 		var err error
 		// Handle all state deletions first
