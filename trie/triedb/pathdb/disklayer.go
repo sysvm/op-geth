@@ -281,6 +281,7 @@ func (dl *diskLayer) commit(bottom *diffLayer, force bool) (*diskLayer, error) {
 	var (
 		overflow bool
 		oldest   uint64
+		limit    = dl.db.config.StateHistory
 	)
 	if dl.db.freezer != nil {
 		err := writeHistory(dl.db.freezer, bottom)
@@ -293,7 +294,6 @@ func (dl *diskLayer) commit(bottom *diffLayer, force bool) (*diskLayer, error) {
 		if err != nil {
 			return nil, err
 		}
-		limit := dl.db.config.StateHistory
 		if limit != 0 && bottom.stateID()-tail > limit {
 			overflow = true
 			oldest = bottom.stateID() - limit + 1 // track the id of history **after truncation**
@@ -334,12 +334,13 @@ func (dl *diskLayer) commit(bottom *diffLayer, force bool) (*diskLayer, error) {
 	// to 'oldest-1' due to the offset between the freezer index and the history ID.
 	if overflow {
 		if _, ok := dl.buffer.(*nodebufferlist); ok {
-			persistentId := rawdb.ReadPersistentStateID(dl.db.diskdb)
-			if persistentId > dl.db.config.StateHistory {
-				oldest = persistentId - dl.db.config.StateHistory + 1
-				log.Info("force prune ancient under nodebufferlist", "disk_persistent_state_id", persistentId, "truncate_tail", oldest)
+			persistentID := rawdb.ReadPersistentStateID(dl.db.diskdb)
+			if persistentID > limit {
+				oldest = persistentID - limit + 1
+				log.Info("Forcing prune ancient under nodebufferlist", "disk_persistent_state_id",
+					persistentID, "truncate_tail", oldest)
 			} else {
-				log.Info("no prune ancient under nodebufferlist, less db config state history limit")
+				log.Info("No prune ancient under nodebufferlist, less than db config state history limit")
 				return ndl, nil
 			}
 		}
@@ -349,6 +350,7 @@ func (dl *diskLayer) commit(bottom *diffLayer, force bool) (*diskLayer, error) {
 		ancientTail, _ = ndl.db.freezer.Tail()
 		nblAncientSizeGauge.Update(int64(ancientNumber))
 		nblAncientTailGauge.Update(int64(ancientTail))
+
 		if err != nil {
 			log.Error("Failed to truncate from tail", "ntail", oldest-1)
 			return nil, err

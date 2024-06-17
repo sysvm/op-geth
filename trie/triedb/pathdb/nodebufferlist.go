@@ -131,7 +131,7 @@ func newNodeBufferList(
 
 	go nf.loop()
 
-	log.Info("new node buffer list", "proposed block interval", nf.wpBlocks,
+	log.Info("New node buffer list", "proposed block interval", nf.wpBlocks,
 		"reserve multi difflayers", nf.rsevMdNum, "difflayers in multidifflayer", nf.dlInMd,
 		"limit", common.StorageSize(limit), "layers", layers, "persist id", nf.persistID, "base_size", size)
 	return nf
@@ -187,7 +187,7 @@ func (nf *nodebufferlist) commit(root common.Hash, id uint64, block uint64, node
 	oldSize := nf.head.size
 	err := nf.head.commit(root, id, block, 1, nodes)
 	if err != nil {
-		log.Crit("failed to commit nodes to node buffer list", "error", err)
+		log.Crit("Failed to commit nodes to node buffer list", "error", err)
 	}
 
 	nf.stateId = id
@@ -221,7 +221,7 @@ func (nf *nodebufferlist) revert(db ethdb.KeyValueReader, nodes map[common.Hash]
 
 	merge := func(buffer *multiDifflayer) bool {
 		if err := nf.base.commit(buffer.root, buffer.id, buffer.block, buffer.layers, buffer.nodes); err != nil {
-			log.Crit("failed to commit nodes to base node buffer", "error", err)
+			log.Crit("Failed to commit nodes to base node buffer", "error", err)
 		}
 		_ = nf.popBack()
 		return true
@@ -262,7 +262,7 @@ func (nf *nodebufferlist) flush(db ethdb.KeyValueStore, clean *fastcache.Cache, 
 	for {
 		if nf.isFlushing.Swap(true) {
 			time.Sleep(time.Duration(DefaultBackgroundFlushInterval) * time.Second)
-			log.Info("waiting base node buffer to be flushed to disk")
+			log.Info("Waiting base node buffer to be flushed to disk")
 			continue
 		} else {
 			break
@@ -271,12 +271,12 @@ func (nf *nodebufferlist) flush(db ethdb.KeyValueStore, clean *fastcache.Cache, 
 
 	commitFunc := func(buffer *multiDifflayer) bool {
 		if nf.count <= nf.rsevMdNum {
-			log.Info("Skip force flush bufferlist due to bufferlist is too less",
+			log.Info("Skip forcing flush buffer list due to buffer list is too less",
 				"bufferlist_count", nf.count, "reserve_multi_difflayer_number", nf.rsevMdNum)
 			return false
 		}
 		if err := nf.base.commit(buffer.root, buffer.id, buffer.block, buffer.layers, buffer.nodes); err != nil {
-			log.Crit("failed to commit nodes to base node buffer", "error", err)
+			log.Crit("Failed to commit nodes to base node buffer", "error", err)
 		}
 		_ = nf.popBack()
 		return true
@@ -288,7 +288,7 @@ func (nf *nodebufferlist) flush(db ethdb.KeyValueStore, clean *fastcache.Cache, 
 	persistID := nf.persistID + nf.base.layers
 	err := nf.base.flush(nf.db, nf.clean, persistID)
 	if err != nil {
-		log.Crit("failed to flush base node buffer to disk", "error", err)
+		log.Crit("Failed to flush base node buffer to disk", "error", err)
 	}
 	nf.isFlushing.Store(false)
 	nf.base.reset()
@@ -355,11 +355,11 @@ func (nf *nodebufferlist) getAllNodes() map[common.Hash]map[string]*trienode.Nod
 
 	nc := newMultiDifflayer(nf.limit, 0, common.Hash{}, make(map[common.Hash]map[string]*trienode.Node), 0)
 	if err := nc.commit(nf.base.root, nf.base.id, nf.base.block, nf.layers, nf.base.nodes); err != nil {
-		log.Crit("failed to commit nodes to node buffer", "error", err)
+		log.Crit("Failed to commit nodes to node buffer", "error", err)
 	}
 	merge := func(buffer *multiDifflayer) bool {
 		if err := nc.commit(buffer.root, buffer.id, buffer.block, buffer.layers, buffer.nodes); err != nil {
-			log.Crit("failed to commit nodes to node buffer", "error", err)
+			log.Crit("Failed to commit nodes to node buffer", "error", err)
 		}
 		return true
 	}
@@ -384,7 +384,7 @@ func (nf *nodebufferlist) waitAndStopFlushing() {
 	nf.stopFlushing.Store(true)
 	for nf.isFlushing.Load() {
 		time.Sleep(time.Second)
-		log.Warn("waiting background node buffer to be flushed to disk")
+		log.Warn("Waiting background node buffer to be flushed to disk")
 	}
 }
 
@@ -435,17 +435,17 @@ func (nf *nodebufferlist) popBack() *multiDifflayer {
 
 	nf.size -= tag.size
 	if nf.size < 0 {
-		log.Warn("node buffer list size less 0", "old", nf.size, "dealt", tag.size)
+		log.Warn("Node buffer list size less 0", "old", nf.size, "dealt", tag.size)
 		nf.size = 0
 	}
 	nf.layers -= tag.layers
 	if nf.layers < 0 {
-		log.Warn("node buffer list layers less 0", "old", nf.layers, "dealt", tag.layers)
+		log.Warn("Node buffer list layers less 0", "old", nf.layers, "dealt", tag.layers)
 		nf.layers = 0
 	}
 	nf.count--
 	if nf.count < 0 {
-		log.Warn("node buffer list count less 0", "old", nf.count)
+		log.Warn("Node buffer list count less 0", "old", nf.count)
 		nf.count = 0
 	}
 
@@ -490,15 +490,15 @@ func (nf *nodebufferlist) traverseReverse(cb func(*multiDifflayer) bool) {
 func (nf *nodebufferlist) diffToBase() {
 	commitFunc := func(buffer *multiDifflayer) bool {
 		if nf.base.size >= nf.base.limit {
-			log.Debug("base node buffer need write disk immediately")
+			log.Debug("Base node buffer need write disk immediately")
 			return false
 		}
 		if nf.count <= nf.rsevMdNum {
-			log.Debug("node buffer list less, waiting more difflayer to be committed")
+			log.Debug("Node buffer list less, waiting more difflayer to be committed")
 			return false
 		}
 		if buffer.block%nf.dlInMd != 0 {
-			log.Crit("committed block number misaligned", "block", buffer.block)
+			log.Crit("Committed block number misaligned", "block", buffer.block)
 		}
 
 		if nf.keepFunc != nil { // keep in background flush stage
@@ -516,7 +516,7 @@ func (nf *nodebufferlist) diffToBase() {
 		err := nf.base.commit(buffer.root, buffer.id, buffer.block, buffer.layers, buffer.nodes)
 		nf.baseMux.Unlock()
 		if err != nil {
-			log.Error("failed to commit nodes to base node buffer", "error", err)
+			log.Error("Failed to commit nodes to base node buffer", "error", err)
 			return false
 		}
 
@@ -550,7 +550,7 @@ func (nf *nodebufferlist) backgroundFlush() {
 	nf.baseMux.RUnlock()
 	err := nf.base.flush(nf.db, nf.clean, persistID)
 	if err != nil {
-		log.Error("failed to flush base node buffer to disk", "error", err)
+		log.Error("Failed to flush base node buffer to disk", "error", err)
 		return
 	}
 	nf.baseMux.Lock()
@@ -630,9 +630,7 @@ func (nf *nodebufferlist) proposedBlockReader(blockRoot common.Hash) (layer, err
 	defer nf.mux.RUnlock()
 
 	var diff *multiDifflayer
-	context := []interface{}{
-		"root", blockRoot,
-	}
+	context := []interface{}{"root", blockRoot}
 	find := func(buffer *multiDifflayer) bool {
 		context = append(context, []interface{}{"multi_difflayer_number", buffer.block}...)
 		context = append(context, []interface{}{"multi_difflayer_root", buffer.root}...)
@@ -647,7 +645,7 @@ func (nf *nodebufferlist) proposedBlockReader(blockRoot common.Hash) (layer, err
 	nf.traverse(find)
 	if diff == nil {
 		proposedBlockReaderMismatch.Mark(1)
-		log.Debug("proposed block state is not available", context...)
+		log.Debug("Proposed block state is not available", context...)
 		return nil, fmt.Errorf("proposed block proof state %#x is not available", blockRoot)
 	}
 	proposedBlockReaderSuccess.Mark(1)
@@ -664,7 +662,7 @@ func (nf *nodebufferlist) report() {
 		"stateid", nf.stateId, "persist", nf.persistID, "size", common.StorageSize(nf.size),
 		"basesize", common.StorageSize(nf.base.size), "baselayers", nf.base.layers,
 	}
-	log.Info("node buffer list info", context...)
+	log.Info("Node buffer list info", context...)
 }
 
 var _ layer = &proposedBlockReader{}
@@ -803,10 +801,10 @@ func (mf *multiDifflayer) node(owner common.Hash, path []byte, hash common.Hash)
 // It will just hold the node references from the given map which are safe to copy.
 func (mf *multiDifflayer) commit(root common.Hash, id uint64, block uint64, layers uint64, nodes map[common.Hash]map[string]*trienode.Node) error {
 	if mf.id != 0 && mf.id >= id {
-		log.Warn("state id out of order", "pre_stateId", mf.id, "capping_stateId", id)
+		log.Warn("State id out of order", "pre_stateId", mf.id, "capping_stateId", id)
 	}
 	if mf.block != 0 && mf.block >= block {
-		log.Warn("block number out of order", "pre_block", mf.block, "capping_block", block)
+		log.Warn("Block number out of order", "pre_block", mf.block, "capping_block", block)
 	}
 
 	mf.root = root
