@@ -411,11 +411,14 @@ func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, genesis *Genesis
 			var diskRoot common.Hash
 			if bc.cacheConfig.SnapshotLimit > 0 {
 				diskRoot = rawdb.ReadSnapshotRoot(bc.db)
+				log.Info("22jd", "limit", bc.cacheConfig.SnapshotLimit, "diskRoot", diskRoot.String())
 			}
 			if bc.triedb.Scheme() == rawdb.PathScheme {
 				recoverable, _ := bc.triedb.Recoverable(diskRoot)
+				log.Info("2392hfwde", "1", !bc.HasState(diskRoot), "2", !recoverable)
 				if !bc.HasState(diskRoot) && !recoverable {
 					diskRoot = bc.triedb.Head()
+					log.Info("f2m20i", "diskRoot", diskRoot.String())
 				}
 			}
 			if diskRoot != (common.Hash{}) {
@@ -718,6 +721,7 @@ func (bc *BlockChain) setHeadBeyondRoot(head uint64, time uint64, root common.Ha
 	// current freezer limit to start nuking id underflown
 	pivot := rawdb.ReadLastPivotNumber(bc.db)
 	frozen, _ := bc.db.Ancients()
+	log.Info("setHeadBeyondRoot", "root", root.String(), "head", head)
 
 	updateFn := func(db ethdb.KeyValueWriter, header *types.Header) (*types.Header, bool) {
 		// Rewind the blockchain, ensuring we don't end up with a stateless head
@@ -757,6 +761,7 @@ func (bc *BlockChain) setHeadBeyondRoot(head uint64, time uint64, root common.Ha
 						if !bc.HasState(newHeadBlock.Root()) && bc.stateRecoverable(newHeadBlock.Root()) {
 							// Rewind to a block with recoverable state. If the state is
 							// missing, run the state recovery here.
+							log.Info("238328h", "root", newHeadBlock.Root().String(), "number", newHeadBlock.NumberU64())
 							if err := bc.triedb.Recover(newHeadBlock.Root()); err != nil {
 								log.Crit("Failed to rollback state", "err", err) // Shouldn't happen
 							}
