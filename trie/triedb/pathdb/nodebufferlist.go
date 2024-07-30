@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/VictoriaMetrics/fastcache"
+	"golang.org/x/sync/errgroup"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -184,7 +186,7 @@ func recoverNodeBufferList(db ethdb.Database, freezer *rawdb.ResettableFreezer, 
 		"tail_state_id", tail, "waiting_recover_num", head-nbl.persistID)
 
 	var (
-		wg           sync.WaitGroup
+		// wg           sync.WaitGroup
 		startStateID = nbl.persistID + 1
 	)
 	startBlock, err := readBlockNumber(freezer, startStateID)
@@ -206,29 +208,45 @@ func recoverNodeBufferList(db ethdb.Database, freezer *rawdb.ResettableFreezer, 
 		startBlock, "endBlock", endBlock)
 
 	nbl.linkMultiDiffLayers(len(blockIntervals))
-	errChan := make(chan error, 1)
+	var eg errgroup.Group
+	// errChan := make(chan error, 1)
 	for current, i := nbl.head, 0; current != nil; current, i = current.next, i+1 {
-		wg.Add(1)
-		go func(index int, slice []uint64, mdl *multiDifflayer) {
-			defer wg.Done()
-			for j := slice[0]; j <= slice[1]; j++ {
+		i := i
+		eg.Go(func() error {
+			for j := stateIntervals[i][0]; j <= stateIntervals[i][1]; j++ {
 				h, err := nbl.readStateHistory(freezer, j)
 				if err != nil {
 					log.Error("Failed to read state history", "error", err)
-					errChan <- err
-					return
+					return err
 				}
-				if err = mdl.commit(h.meta.root, j, h.meta.block, 1, flattenTrieNodes(h.nodes)); err != nil {
+				if err = current.commit(h.meta.root, j, h.meta.block, 1, flattenTrieNodes(h.nodes)); err != nil {
 					log.Error("Failed to commit trie nodes to multi diff layer", "error", err)
-					errChan <- err
-					return
+					return err
 				}
 			}
-		}(i, stateIntervals[i], current)
+			return nil
+		})
+		// wg.Add(1)
+		// go func(index int, slice []uint64, mdl *multiDifflayer) {
+		// 	defer wg.Done()
+		// 	for j := slice[0]; j <= slice[1]; j++ {
+		// 		h, err := nbl.readStateHistory(freezer, j)
+		// 		if err != nil {
+		// 			log.Error("Failed to read state history", "error", err)
+		// 			errChan <- err
+		// 			return
+		// 		}
+		// 		if err = mdl.commit(h.meta.root, j, h.meta.block, 1, flattenTrieNodes(h.nodes)); err != nil {
+		// 			log.Error("Failed to commit trie nodes to multi diff layer", "error", err)
+		// 			errChan <- err
+		// 			return
+		// 		}
+		// 	}
+		// }(i, stateIntervals[i], current)
 	}
-	wg.Wait()
-	close(errChan)
-	if err = <-errChan; err != nil {
+	// wg.Wait()
+	// close(errChan)
+	if err = eg.Wait(); err != nil {
 		return nil, err
 	}
 
