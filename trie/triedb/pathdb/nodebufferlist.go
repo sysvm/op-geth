@@ -212,6 +212,7 @@ func recoverNodeBufferList(db ethdb.Database, freezer *rawdb.ResettableFreezer, 
 	// errChan := make(chan error, 1)
 	for current, i := nbl.head, 0; current != nil; current, i = current.next, i+1 {
 		i := i
+		current := current
 		eg.Go(func() error {
 			for j := stateIntervals[i][0]; j <= stateIntervals[i][1]; j++ {
 				h, err := nbl.readStateHistory(freezer, j)
