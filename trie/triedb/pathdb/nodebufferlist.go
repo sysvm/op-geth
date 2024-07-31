@@ -185,10 +185,7 @@ func recoverNodeBufferList(db ethdb.Database, freezer *rawdb.ResettableFreezer, 
 	log.Info("Ancient db meta info", "persistent_state_id", nbl.persistID, "head_state_id", head,
 		"tail_state_id", tail, "waiting_recover_num", head-nbl.persistID)
 
-	var (
-		// wg           sync.WaitGroup
-		startStateID = nbl.persistID + 1
-	)
+	startStateID := nbl.persistID + 1
 	startBlock, err := readBlockNumber(freezer, startStateID)
 	if err != nil {
 		log.Error("Failed to read start block number", "error", err, "tail_state_id", startStateID)
@@ -207,46 +204,26 @@ func recoverNodeBufferList(db ethdb.Database, freezer *rawdb.ResettableFreezer, 
 	log.Info("block intervals info", "blockIntervals", blockIntervals, "stateIntervals", stateIntervals, "startBlock",
 		startBlock, "endBlock", endBlock)
 
-	nbl.linkMultiDiffLayers(len(blockIntervals))
 	var eg errgroup.Group
-	// errChan := make(chan error, 1)
+	nbl.linkMultiDiffLayers(len(blockIntervals))
 	for current, i := nbl.head, 0; current != nil; current, i = current.next, i+1 {
-		i := i
-		current := current
+		index := i
+		mdl := current
 		eg.Go(func() error {
-			for j := stateIntervals[i][0]; j <= stateIntervals[i][1]; j++ {
+			for j := stateIntervals[index][0]; j <= stateIntervals[index][1]; j++ {
 				h, err := nbl.readStateHistory(freezer, j)
 				if err != nil {
 					log.Error("Failed to read state history", "error", err)
 					return err
 				}
-				if err = current.commit(h.meta.root, j, h.meta.block, 1, flattenTrieNodes(h.nodes)); err != nil {
+				if err = mdl.commit(h.meta.root, j, h.meta.block, 1, flattenTrieNodes(h.nodes)); err != nil {
 					log.Error("Failed to commit trie nodes to multi diff layer", "error", err)
 					return err
 				}
 			}
 			return nil
 		})
-		// wg.Add(1)
-		// go func(index int, slice []uint64, mdl *multiDifflayer) {
-		// 	defer wg.Done()
-		// 	for j := slice[0]; j <= slice[1]; j++ {
-		// 		h, err := nbl.readStateHistory(freezer, j)
-		// 		if err != nil {
-		// 			log.Error("Failed to read state history", "error", err)
-		// 			errChan <- err
-		// 			return
-		// 		}
-		// 		if err = mdl.commit(h.meta.root, j, h.meta.block, 1, flattenTrieNodes(h.nodes)); err != nil {
-		// 			log.Error("Failed to commit trie nodes to multi diff layer", "error", err)
-		// 			errChan <- err
-		// 			return
-		// 		}
-		// 	}
-		// }(i, stateIntervals[i], current)
 	}
-	// wg.Wait()
-	// close(errChan)
 	if err = eg.Wait(); err != nil {
 		return nil, err
 	}
