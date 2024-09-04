@@ -342,7 +342,7 @@ func (t *tester) verifyHistory() error {
 	for i, root := range t.roots {
 		// The state history related to the state above disk layer should not exist.
 		if i > bottom {
-			_, err := readHistory(t.db.freezer, uint64(i+1))
+			_, err := readHistory(t.db.freezer, uint64(i+1), false)
 			if err == nil {
 				return errors.New("unexpected state history")
 			}
@@ -350,7 +350,7 @@ func (t *tester) verifyHistory() error {
 		}
 		// The state history related to the state below or equal to the disk layer
 		// should exist.
-		obj, err := readHistory(t.db.freezer, uint64(i+1))
+		obj, err := readHistory(t.db.freezer, uint64(i+1), false)
 		if err != nil {
 			return err
 		}

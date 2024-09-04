@@ -249,8 +249,8 @@ func (nf *nodebufferlist) linkMultiDiffLayers(blockIntervalLength int) {
 }
 
 func (nf *nodebufferlist) readStateHistory(freezer *rawdb.ResettableFreezer, stateID uint64) (*history, error) {
-	h, err := readHistory(freezer, stateID)
-	if err != nil {
+	h, err := readHistory(freezer, stateID, true)
+	if err != nil || h.nodes == nil {
 		log.Error("Failed to read history from freezer db", "error", err)
 		return nil, err
 	}
