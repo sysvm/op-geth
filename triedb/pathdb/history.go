@@ -257,7 +257,7 @@ type history struct {
 }
 
 // newHistory constructs the state history object with provided state change set.
-func newHistory(root common.Hash, parent common.Hash, block uint64, fastRecovery bool, states *triestate.Set, nodes map[common.Hash]map[string]*trienode.Node) *history {
+func newHistory(root common.Hash, parent common.Hash, block uint64, states *triestate.Set, nodes map[common.Hash]map[string]*trienode.Node) *history {
 	var (
 		accountList []common.Address
 		storageList = make(map[common.Address][]common.Hash)
@@ -293,11 +293,7 @@ func newHistory(root common.Hash, parent common.Hash, block uint64, fastRecovery
 		accountList: accountList,
 		storages:    states.Storages,
 		storageList: storageList,
-	}
-	if fastRecovery {
-		h.nodes = compressTrieNodes(nodes)
-	} else {
-		h.nodes = nil
+		nodes:       compressTrieNodes(nodes),
 	}
 
 	return h
@@ -340,17 +336,9 @@ func (h *history) encode() ([]byte, []byte, []byte, []byte, []byte) {
 		accountIndexes = append(accountIndexes, accIndex.encode()...)
 	}
 
-	var (
-		nodesBytes []byte
-		err        error
-	)
-	if h.nodes != nil {
-		nodesBytes, err = rlp.EncodeToBytes(h.nodes)
-		if err != nil {
-			log.Crit("Failed to encode trie nodes", "error", err)
-		}
-	} else {
-		nodesBytes = nil
+	nodesBytes, err := rlp.EncodeToBytes(h.nodes)
+	if err != nil {
+		log.Crit("Failed to encode trie nodes", "error", err)
 	}
 
 	return accountData, storageData, accountIndexes, storageIndexes, nodesBytes
@@ -509,9 +497,13 @@ func (h *history) decode(accountData, storageData, accountIndexes, storageIndexe
 		}
 	}
 
-	if err := rlp.DecodeBytes(trieNodes, &decodedTrieNodes); err != nil {
-		log.Error("Failed to decode state history trie nodes", "error", err)
-		return err
+	if trieNodes != nil {
+		if err := rlp.DecodeBytes(trieNodes, &decodedTrieNodes); err != nil {
+			log.Error("Failed to decode state history trie nodes", "error", err)
+			return err
+		}
+	} else {
+		decodedTrieNodes = nil
 	}
 
 	h.accounts = accounts
@@ -580,7 +572,7 @@ func (h *history) trieNodesSize() int {
 func readBlockNumber(freezer *rawdb.ResettableFreezer, stateID uint64) (uint64, error) {
 	blob := rawdb.ReadStateHistoryMeta(freezer, stateID)
 	if len(blob) == 0 {
-		return 0, fmt.Errorf("state history not found %d", stateID)
+		return 0, fmt.Errorf("state history [%d] not found", stateID)
 	}
 	var m meta
 	if err := m.decode(blob); err != nil {
@@ -595,7 +587,7 @@ func readAllBlockNumbers(freezer *rawdb.ResettableFreezer, startStateID, endStat
 	for i := startStateID; i <= endStateID; i++ {
 		blob := rawdb.ReadStateHistoryMeta(freezer, i)
 		if len(blob) == 0 {
-			return nil, fmt.Errorf("state history not found %d", i)
+			return nil, fmt.Errorf("state history [%d] not found", i)
 		}
 		var m meta
 		if err := m.decode(blob); err != nil {
@@ -607,10 +599,10 @@ func readAllBlockNumbers(freezer *rawdb.ResettableFreezer, startStateID, endStat
 }
 
 // readHistory reads and decodes the state history object by the given id.
-func readHistory(freezer *rawdb.ResettableFreezer, id uint64) (*history, error) {
+func readHistory(freezer *rawdb.ResettableFreezer, id uint64, fastRecovery bool) (*history, error) {
 	blob := rawdb.ReadStateHistoryMeta(freezer, id)
 	if len(blob) == 0 {
-		return nil, fmt.Errorf("state history not found %d", id)
+		return nil, fmt.Errorf("state history [%d] not found", id)
 	}
 	var m meta
 	if err := m.decode(blob); err != nil {
@@ -622,8 +614,15 @@ func readHistory(freezer *rawdb.ResettableFreezer, id uint64) (*history, error) 
 		storageData    = rawdb.ReadStateStorageHistory(freezer, id)
 		accountIndexes = rawdb.ReadStateAccountIndex(freezer, id)
 		storageIndexes = rawdb.ReadStateStorageIndex(freezer, id)
-		trieNodes      = rawdb.ReadStateTrieNodesHistory(freezer, id)
 	)
+
+	var trieNodes []byte
+	if fastRecovery {
+		trieNodes = rawdb.ReadStateTrieNodesHistory(freezer, id)
+	} else {
+		trieNodes = nil
+	}
+
 	if err := dec.decode(accountData, storageData, accountIndexes, storageIndexes, trieNodes); err != nil {
 		return nil, err
 	}
@@ -638,7 +637,7 @@ func writeHistory(freezer *rawdb.ResettableFreezer, dl *diffLayer, fastRecovery 
 	}
 	var (
 		start   = time.Now()
-		history = newHistory(dl.rootHash(), dl.parentLayer().rootHash(), dl.block, fastRecovery, dl.states, dl.nodes)
+		history = newHistory(dl.rootHash(), dl.parentLayer().rootHash(), dl.block, dl.states, dl.nodes)
 	)
 
 	accountData, storageData, accountIndex, storageIndex, trieNodes := history.encode()

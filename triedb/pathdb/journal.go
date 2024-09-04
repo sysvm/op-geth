@@ -267,7 +267,8 @@ func (db *Database) loadLayers() layer {
 		dl      *diskLayer
 		stateID = rawdb.ReadPersistentStateID(db.diskdb)
 	)
-	if (errors.Is(err, errMissJournal) || errors.Is(err, errUnmatchedJournal)) && db.fastRecovery {
+	if (errors.Is(err, errMissJournal) || errors.Is(err, errUnmatchedJournal)) && db.fastRecovery &&
+		db.config.TrieNodeBufferType == NodeBufferList {
 		start := time.Now()
 		if db.freezer == nil {
 			log.Crit("Use unopened freezer db to recover node buffer list")
@@ -673,13 +674,15 @@ func flattenTrieNodes(jn []journalNodes) map[common.Hash]map[string]*trienode.No
 	return nodes
 }
 
-func check(ancient string, nodeBufferType NodeBufferType) bool {
-	trieNodes := rawdb.DetectTrieNodesFile(ancient)
-	state := common.FileExist(filepath.Join(ancient, rawdb.StateFreezerName))
-	if state || trieNodes {
+func checkAncientAndNodeBuffer(ancient string, nodeBufferType NodeBufferType) bool {
+	if !common.FileExist(filepath.Join(ancient, rawdb.StateFreezerName)) {
+		return true
+	}
+
+	if rawdb.DetectTrieNodesFile(ancient) {
 		if nodeBufferType == AsyncNodeBuffer || nodeBufferType == SyncNodeBuffer {
-			log.Warn(fmt.Sprintf("%s node buffer will be removed in the future!"))
-			log.Warn("Recommend using nodebufferlist")
+			log.Warn(fmt.Sprintf("%s node buffer is deprecated!", nodeBufferTypeToString[nodeBufferType]))
+			log.Warn("Recommend using nodebufferlist!")
 			if err := rawdb.DeleteTrieNodesFile(ancient); err != nil {
 				log.Crit("Failed to delete trie nodes file", "error", err)
 			}
@@ -687,5 +690,5 @@ func check(ancient string, nodeBufferType NodeBufferType) bool {
 		}
 		return true
 	}
-	return true
+	return false
 }
