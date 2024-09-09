@@ -150,7 +150,7 @@ func newNodeBufferList(
 	}
 	if first {
 		log.Info("ncwicncnwnj")
-		nf.diffToBase()
+		nf.forceFlush()
 	}
 
 	go nf.loop()
@@ -658,6 +658,37 @@ func (nf *nodebufferlist) traverseReverse(cb func(*multiDifflayer) bool) {
 	return
 }
 
+func (nf *nodebufferlist) forceFlush() {
+	commitFunc := func(buffer *multiDifflayer) bool {
+		nf.baseMux.Lock()
+		err := nf.base.commit(buffer.root, buffer.id, buffer.block, buffer.layers, buffer.nodes)
+		nf.baseMux.Unlock()
+		if err != nil {
+			log.Error("failed to commit nodes to base node buffer", "error", err)
+			return false
+		}
+
+		nf.mux.Lock()
+		_ = nf.popBack()
+		nodeBufferListSizeGauge.Update(int64(nf.size))
+		nodeBufferListCountGauge.Update(int64(nf.count))
+		nodeBufferListLayerGauge.Update(int64(nf.layers))
+		if nf.layers > 0 {
+			nodeBufferListDifflayerAvgSize.Update(int64(nf.size / nf.layers))
+		}
+		nf.mux.Unlock()
+		baseNodeBufferSizeGauge.Update(int64(nf.base.size))
+		baseNodeBufferLayerGauge.Update(int64(nf.base.layers))
+		if nf.base.layers > 0 {
+			baseNodeBufferDifflayerAvgSize.Update(int64(nf.base.size / nf.base.layers))
+		}
+		nf.report()
+
+		return true
+	}
+	nf.traverseReverse(commitFunc)
+}
+
 // diffToBase calls traverseReverse and merges the multiDifflayer's nodes to
 // base node buffer, if up to limit size and flush to disk. It is called
 // periodically in the background
@@ -1079,7 +1110,7 @@ func (mf *multiDifflayer) flush(db ethdb.KeyValueStore, clean *fastcache.Cache, 
 	commitBytesMeter.Mark(int64(size))
 	commitNodesMeter.Mark(int64(nodes))
 	commitTimeTimer.UpdateSince(start)
-	log.Info("Persisted pathdb nodes", "nodes", len(mf.nodes), "bytes", common.StorageSize(size), "state_id", id, "elapsed", common.PrettyDuration(time.Since(start)))
+	log.Info("Persisted pathdb nodes 1111", "nodes", len(mf.nodes), "bytes", common.StorageSize(size), "state_id", id, "elapsed", common.PrettyDuration(time.Since(start)))
 	return nil
 }
 
