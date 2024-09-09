@@ -131,13 +131,13 @@ func NewTrieNodeBuffer(
 	log.Info("init trie node buffer", "type", nodeBufferTypeToString[trieNodeBufferType])
 	switch trieNodeBufferType {
 	case NodeBufferList:
-		return newNodeBufferList(db, uint64(limit), nodes, layers, proposeBlockInterval, keepFunc, freezer, recovery, false)
+		return newNodeBufferList(db, uint64(limit), nodes, layers, proposeBlockInterval, keepFunc, freezer, recovery, first)
 	case AsyncNodeBuffer:
 		return newAsyncNodeBuffer(limit, nodes, layers)
 	case SyncNodeBuffer:
 		return newNodeBuffer(limit, nodes, layers)
 	default:
-		return newAsyncNodeBuffer(limit, nodes, layers)
+		return newNodeBufferList(db, uint64(limit), nodes, layers, proposeBlockInterval, keepFunc, freezer, recovery, first)
 	}
 }
 
