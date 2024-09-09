@@ -358,11 +358,6 @@ func (nf *nodebufferlist) commit(root common.Hash, id uint64, block uint64, node
 	nf.mux.Lock()
 	defer nf.mux.Unlock()
 
-	if nf.isGenesis {
-		nf.forceFlush()
-		return nf
-	}
-
 	if nf.head == nil {
 		nf.head = newMultiDifflayer(nf.limit, 0, common.Hash{}, make(map[common.Hash]map[string]*trienode.Node), 0)
 		nf.tail = nf.head
@@ -469,6 +464,8 @@ func (nf *nodebufferlist) flush(db ethdb.KeyValueStore, clean *fastcache.Cache, 
 	if !nf.isGenesis {
 		log.Info("fme2iccmi2e")
 		nf.traverseReverse(commitFunc)
+	} else {
+		nf.forceFlush()
 	}
 	log.Info("fm2o0923dfim")
 	persistID := nf.persistID + nf.base.layers
@@ -673,13 +670,12 @@ func (nf *nodebufferlist) forceFlush() {
 		err := nf.base.commit(buffer.root, buffer.id, buffer.block, buffer.layers, buffer.nodes)
 		nf.baseMux.Unlock()
 		if err != nil {
-			log.Error("failed to commit nodes to base node buffer", "error", err)
+			log.Error("Failed to commit nodes to base node buffer", "error", err)
 			return false
 		}
-
 		return true
 	}
-	nf.traverseReverse(commitFunc)
+	nf.traverse(commitFunc)
 }
 
 // diffToBase calls traverseReverse and merges the multiDifflayer's nodes to
