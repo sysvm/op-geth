@@ -90,9 +90,9 @@ type trienodebuffer interface {
 type NodeBufferType int32
 
 const (
-	AsyncNodeBuffer NodeBufferType = 0
+	NodeBufferList  NodeBufferType = 0
 	SyncNodeBuffer  NodeBufferType = 1
-	NodeBufferList  NodeBufferType = 2
+	AsyncNodeBuffer NodeBufferType = 2
 )
 
 var (
