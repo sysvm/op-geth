@@ -130,6 +130,7 @@ func newNodeBufferList(
 			return nil, err
 		}
 	} else {
+		log.Info("d3n82337")
 		ele := newMultiDifflayer(limit, 0, common.Hash{}, make(map[common.Hash]map[string]*trienode.Node), 0)
 		nf = &nodebufferlist{
 			db:              db,
@@ -459,9 +460,12 @@ func (nf *nodebufferlist) flush(db ethdb.KeyValueStore, clean *fastcache.Cache, 
 		return true
 	}
 
+	log.Info("24nf2nu2")
 	if !nf.isGenesis {
+		log.Info("fme2iccmi2e")
 		nf.traverseReverse(commitFunc)
 	}
+	log.Info("fm2o0923dfim")
 	persistID := nf.persistID + nf.base.layers
 	err := nf.base.flush(nf.db, nf.clean, persistID)
 	if err != nil {
