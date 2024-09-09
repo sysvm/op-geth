@@ -151,6 +151,7 @@ func newNodeBufferList(
 	if first {
 		log.Info("ncwicncnwnj")
 		nf.forceFlush()
+		nf.backgroundFlush()
 	}
 
 	go nf.loop()
@@ -667,22 +668,6 @@ func (nf *nodebufferlist) forceFlush() {
 			log.Error("failed to commit nodes to base node buffer", "error", err)
 			return false
 		}
-
-		nf.mux.Lock()
-		_ = nf.popBack()
-		nodeBufferListSizeGauge.Update(int64(nf.size))
-		nodeBufferListCountGauge.Update(int64(nf.count))
-		nodeBufferListLayerGauge.Update(int64(nf.layers))
-		if nf.layers > 0 {
-			nodeBufferListDifflayerAvgSize.Update(int64(nf.size / nf.layers))
-		}
-		nf.mux.Unlock()
-		baseNodeBufferSizeGauge.Update(int64(nf.base.size))
-		baseNodeBufferLayerGauge.Update(int64(nf.base.layers))
-		if nf.base.layers > 0 {
-			baseNodeBufferDifflayerAvgSize.Update(int64(nf.base.size / nf.base.layers))
-		}
-		nf.report()
 
 		return true
 	}
