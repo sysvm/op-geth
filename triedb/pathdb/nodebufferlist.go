@@ -462,9 +462,9 @@ func (nf *nodebufferlist) flush(db ethdb.KeyValueStore, clean *fastcache.Cache, 
 
 	log.Info("24nf2nu2")
 	if !nf.isGenesis {
-		log.Info("fme2iccmi2e")
 		nf.traverseReverse(commitFunc)
 	} else {
+		log.Info("fme2iccmi2e")
 		nf.forceFlush()
 	}
 	log.Info("fm2o0923dfim")
@@ -666,13 +666,18 @@ func (nf *nodebufferlist) traverseReverse(cb func(*multiDifflayer) bool) {
 
 func (nf *nodebufferlist) forceFlush() {
 	commitFunc := func(buffer *multiDifflayer) bool {
+		log.Info("rj238328")
 		nf.baseMux.Lock()
+		log.Info("dm392d29m")
 		err := nf.base.commit(buffer.root, buffer.id, buffer.block, buffer.layers, buffer.nodes)
+		log.Info("dm329d23910")
 		nf.baseMux.Unlock()
+		log.Info("d23903d2i")
 		if err != nil {
 			log.Error("Failed to commit nodes to base node buffer", "error", err)
 			return false
 		}
+		log.Info("d3190120o")
 		return false
 	}
 	nf.traverse(commitFunc)
