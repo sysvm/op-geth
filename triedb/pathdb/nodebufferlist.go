@@ -359,7 +359,7 @@ func (nf *nodebufferlist) commit(root common.Hash, id uint64, block uint64, node
 	defer nf.mux.Unlock()
 
 	if nf.isGenesis {
-		nf.diffToBase()
+		nf.forceFlush()
 		return nf
 	}
 
