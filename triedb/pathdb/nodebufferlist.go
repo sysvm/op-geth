@@ -148,6 +148,10 @@ func newNodeBufferList(
 			keepFunc:        keepFunc,
 		}
 	}
+	if first {
+		log.Info("ncwicncnwnj")
+		nf.diffToBase()
+	}
 
 	go nf.loop()
 

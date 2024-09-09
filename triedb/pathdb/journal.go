@@ -267,6 +267,7 @@ func (db *Database) loadLayers() layer {
 		dl      *diskLayer
 		stateID = rawdb.ReadPersistentStateID(db.diskdb)
 	)
+
 	if (errors.Is(err, errMissJournal) || errors.Is(err, errUnmatchedJournal)) && db.fastRecovery &&
 		db.config.TrieNodeBufferType == NodeBufferList {
 		start := time.Now()
@@ -276,7 +277,7 @@ func (db *Database) loadLayers() layer {
 		log.Info("Recover node buffer list from ancient db")
 
 		nb, err = NewTrieNodeBuffer(db.diskdb, db.config.TrieNodeBufferType, db.bufferSize, nil, 0,
-			db.config.ProposeBlockInterval, db.config.NotifyKeep, db.freezer, db.fastRecovery, false)
+			db.config.ProposeBlockInterval, db.config.NotifyKeep, db.freezer, db.fastRecovery, db.first)
 		if err != nil {
 			log.Error("Failed to new trie node buffer for recovery", "error", err)
 		} else {
@@ -288,7 +289,7 @@ func (db *Database) loadLayers() layer {
 	if nb == nil || err != nil {
 		// Return single layer with persistent state.
 		nb, err = NewTrieNodeBuffer(db.diskdb, db.config.TrieNodeBufferType, db.bufferSize, nil, 0,
-			db.config.ProposeBlockInterval, db.config.NotifyKeep, nil, false, false)
+			db.config.ProposeBlockInterval, db.config.NotifyKeep, nil, false, db.first)
 		if err != nil {
 			log.Crit("Failed to new trie node buffer", "error", err)
 			return nil
@@ -688,6 +689,13 @@ func checkAncientAndNodeBuffer(ancient string, nodeBufferType NodeBufferType) bo
 			}
 			return false
 		}
+		return true
+	}
+	return false
+}
+
+func checkFirst(ancient string) bool {
+	if !common.FileExist(filepath.Join(ancient, rawdb.StateFreezerName)) {
 		return true
 	}
 	return false
