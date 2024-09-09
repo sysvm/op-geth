@@ -326,7 +326,7 @@ var (
 	PathDBNodeBufferTypeFlag = &cli.StringFlag{
 		Name:     "pathdb.nodebuffer",
 		Usage:    "Type of trienodebuffer to cache trie nodes in disklayer('list', 'sync', or 'async')",
-		Value:    "async",
+		Value:    "list",
 		Category: flags.StateCategory,
 	}
 	ProposeBlockIntervalFlag = &cli.Uint64Flag{
