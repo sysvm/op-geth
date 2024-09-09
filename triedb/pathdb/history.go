@@ -517,7 +517,6 @@ func (h *history) decode(accountData, storageData, accountIndexes, storageIndexe
 func (h *history) Size() int {
 	size := 0
 
-	// calculate size of meta
 	if h.meta != nil {
 		metaSize := 1
 		metaSize += len(h.meta.parent) + len(h.meta.root)
@@ -526,25 +525,20 @@ func (h *history) Size() int {
 
 		size += metaSize
 	}
-	// calculate size of accounts
 	for address, data := range h.accounts {
 		size += len(address)
 		size += len(data)
 	}
-	// calculate size of accountList
 	size += len(h.accountList) * common.AddressLength
-	// calculate size of storages
 	for _, storage := range h.storages {
 		for slotHash, data := range storage {
 			size += len(slotHash)
 			size += len(data)
 		}
 	}
-	// calculate size of storageList
 	for _, slots := range h.storageList {
 		size += len(slots) * common.HashLength
 	}
-	// calculate size of journalNodes
 	for _, jn := range h.nodes {
 		size += common.AddressLength
 		for _, n := range jn.Nodes {
