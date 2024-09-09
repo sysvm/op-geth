@@ -673,7 +673,7 @@ func (nf *nodebufferlist) forceFlush() {
 			log.Error("Failed to commit nodes to base node buffer", "error", err)
 			return false
 		}
-		return true
+		return false
 	}
 	nf.traverse(commitFunc)
 }
