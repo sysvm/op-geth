@@ -344,7 +344,7 @@ func (nc *nodecache) flush(db ethdb.KeyValueStore, clean *fastcache.Cache, id ui
 	commitBytesMeter.Mark(int64(size))
 	commitNodesMeter.Mark(int64(nodes))
 	commitTimeTimer.UpdateSince(start)
-	log.Info("Persisted pathdb nodes 2222", "nodes", len(nc.nodes), "bytes", common.StorageSize(size), "elapsed", common.PrettyDuration(time.Since(start)))
+	log.Debug("Persisted pathdb nodes", "nodes", len(nc.nodes), "bytes", common.StorageSize(size), "elapsed", common.PrettyDuration(time.Since(start)))
 	nc.reset()
 	return nil
 }

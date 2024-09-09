@@ -35,7 +35,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/core/txpool/bundlepool"
-
 	pcsclite "github.com/gballet/go-libpcsclite"
 	gopsutil "github.com/shirou/gopsutil/mem"
 	"github.com/urfave/cli/v2"
