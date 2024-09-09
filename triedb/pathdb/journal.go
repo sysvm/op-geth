@@ -269,7 +269,7 @@ func (db *Database) loadLayers() layer {
 	)
 
 	if (errors.Is(err, errMissJournal) || errors.Is(err, errUnmatchedJournal)) && db.fastRecovery &&
-		db.config.TrieNodeBufferType == NodeBufferList {
+		db.config.TrieNodeBufferType == NodeBufferList && !db.first {
 		start := time.Now()
 		if db.freezer == nil {
 			log.Crit("Use unopened freezer db to recover node buffer list")
