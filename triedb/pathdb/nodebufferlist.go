@@ -69,6 +69,7 @@ type nodebufferlist struct {
 	baseMux   sync.RWMutex    // The mutex of base multiDifflayer and persistID.
 	flushMux  sync.RWMutex    // The mutex of flushing base multiDifflayer for reorg corner case.
 
+	isGenesis       bool           // Flag whether in init genesis
 	isFlushing      atomic.Bool    // Flag indicates writing disk under background.
 	stopFlushing    atomic.Bool    // Flag stops writing disk under background.
 	stopCh          chan struct{}  // Trigger stop background event loop.
@@ -87,8 +88,8 @@ func newNodeBufferList(
 	proposeBlockInterval uint64,
 	keepFunc NotifyKeepFunc,
 	freezer *rawdb.ResettableFreezer,
-	recovery bool,
-	first bool,
+	fastRecovery bool,
+	isGenesis bool,
 ) (*nodebufferlist, error) {
 	var (
 		rsevMdNum uint64
@@ -122,7 +123,7 @@ func newNodeBufferList(
 		nf  *nodebufferlist
 		err error
 	)
-	if recovery {
+	if !isGenesis && fastRecovery {
 		nf, err = recoverNodeBufferList(db, freezer, base, limit, wpBlocks, rsevMdNum, dlInMd)
 		if err != nil {
 			log.Error("Failed to recover node buffer list", "error", err)
@@ -141,17 +142,13 @@ func newNodeBufferList(
 			tail:            ele,
 			count:           1,
 			persistID:       rawdb.ReadPersistentStateID(db),
+			isGenesis:       isGenesis,
 			stopCh:          make(chan struct{}),
 			waitStopCh:      make(chan struct{}),
 			forceKeepCh:     make(chan struct{}),
 			waitForceKeepCh: make(chan struct{}),
 			keepFunc:        keepFunc,
 		}
-	}
-	if first {
-		log.Info("ncwicncnwnj")
-		nf.forceFlush()
-		nf.backgroundFlush()
 	}
 
 	go nf.loop()
@@ -462,7 +459,9 @@ func (nf *nodebufferlist) flush(db ethdb.KeyValueStore, clean *fastcache.Cache, 
 		return true
 	}
 
-	nf.traverseReverse(commitFunc)
+	if !nf.isGenesis {
+		nf.traverseReverse(commitFunc)
+	}
 	persistID := nf.persistID + nf.base.layers
 	err := nf.base.flush(nf.db, nf.clean, persistID)
 	if err != nil {
