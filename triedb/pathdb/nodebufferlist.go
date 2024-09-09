@@ -358,6 +358,11 @@ func (nf *nodebufferlist) commit(root common.Hash, id uint64, block uint64, node
 	nf.mux.Lock()
 	defer nf.mux.Unlock()
 
+	if nf.isGenesis {
+		nf.diffToBase()
+		return nf
+	}
+
 	if nf.head == nil {
 		nf.head = newMultiDifflayer(nf.limit, 0, common.Hash{}, make(map[common.Hash]map[string]*trienode.Node), 0)
 		nf.tail = nf.head
