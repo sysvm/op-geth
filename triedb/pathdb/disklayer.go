@@ -126,11 +126,12 @@ func NewTrieNodeBuffer(
 	keepFunc NotifyKeepFunc,
 	freezer *rawdb.ResettableFreezer,
 	recovery bool,
+	first bool,
 ) (trienodebuffer, error) {
 	log.Info("init trie node buffer", "type", nodeBufferTypeToString[trieNodeBufferType])
 	switch trieNodeBufferType {
 	case NodeBufferList:
-		return newNodeBufferList(db, uint64(limit), nodes, layers, proposeBlockInterval, keepFunc, freezer, recovery)
+		return newNodeBufferList(db, uint64(limit), nodes, layers, proposeBlockInterval, keepFunc, freezer, recovery, false)
 	case AsyncNodeBuffer:
 		return newAsyncNodeBuffer(limit, nodes, layers)
 	case SyncNodeBuffer:

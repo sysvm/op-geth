@@ -88,6 +88,7 @@ func newNodeBufferList(
 	keepFunc NotifyKeepFunc,
 	freezer *rawdb.ResettableFreezer,
 	recovery bool,
+	first bool,
 ) (*nodebufferlist, error) {
 	var (
 		rsevMdNum uint64
