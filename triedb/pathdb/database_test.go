@@ -577,7 +577,7 @@ func TestTailTruncateHistory(t *testing.T) {
 	defer tester.release()
 
 	tester.db.Close()
-	tester.db = New(tester.db.diskdb, &Config{StateHistory: 10})
+	tester.db = New(tester.db.diskdb, &Config{StateHistory: 10, UseBase: true})
 
 	head, err := tester.db.freezer.Ancients()
 	if err != nil {
