@@ -69,7 +69,7 @@ type nodebufferlist struct {
 	baseMux   sync.RWMutex    // The mutex of base multiDifflayer and persistID.
 	flushMux  sync.RWMutex    // The mutex of flushing base multiDifflayer for reorg corner case.
 
-	useBase         bool           // Flag if just use base buffer
+	useBase         atomic.Bool    // Flag if just use base buffer
 	isFlushing      atomic.Bool    // Flag indicates writing disk under background.
 	stopFlushing    atomic.Bool    // Flag stops writing disk under background.
 	stopCh          chan struct{}  // Trigger stop background event loop.
@@ -142,13 +142,13 @@ func newNodeBufferList(
 			tail:            ele,
 			count:           1,
 			persistID:       rawdb.ReadPersistentStateID(db),
-			useBase:         useBase,
 			stopCh:          make(chan struct{}),
 			waitStopCh:      make(chan struct{}),
 			forceKeepCh:     make(chan struct{}),
 			waitForceKeepCh: make(chan struct{}),
 			keepFunc:        keepFunc,
 		}
+		nf.useBase.Store(useBase)
 	}
 
 	go nf.loop()
@@ -319,7 +319,7 @@ func (nf *nodebufferlist) node(owner common.Hash, path []byte, hash common.Hash)
 	nf.mux.RLock()
 	defer nf.mux.RUnlock()
 
-	if nf.useBase {
+	if nf.useBase.Load() {
 		nf.baseMux.RLock()
 		node, err = nf.base.node(owner, path, hash)
 		nf.baseMux.RUnlock()
@@ -365,7 +365,7 @@ func (nf *nodebufferlist) commit(root common.Hash, id uint64, block uint64, node
 	nf.mux.Lock()
 	defer nf.mux.Unlock()
 
-	if nf.useBase {
+	if nf.useBase.Load() {
 		if err := nf.base.commit(root, id, block, 1, nodes); err != nil {
 			log.Crit("Failed to commit nodes to node buffer list", "error", err)
 		}

@@ -648,8 +648,6 @@ func writeHistory(freezer *rawdb.ResettableFreezer, dl *diffLayer, fastRecovery 
 	historyDataBytesMeter.Mark(int64(dataSize))
 	historyIndexBytesMeter.Mark(int64(indexSize))
 	historyBuildTimeMeter.UpdateSince(start)
-	historyTotalSizeMeter1.Mark(int64(history.Size()))
-	historyTrieNodesSizeMeter.Mark(int64(history.trieNodesSize()))
 	log.Debug("Stored state history", "id", dl.stateID(), "block", dl.block, "data", dataSize,
 		"index", indexSize, "elapsed", common.PrettyDuration(time.Since(start)))
 
