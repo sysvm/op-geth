@@ -804,9 +804,9 @@ func testMissingTrieNodes(t *testing.T, scheme string) {
 	)
 	if scheme == rawdb.PathScheme {
 		tdb = triedb.NewDatabase(memDb, &triedb.Config{PathDB: &pathdb.Config{
-			TrieNodeBufferType: pathdb.AsyncNodeBuffer,
-			CleanCacheSize:     0,
-			DirtyCacheSize:     0,
+			UseBase:        true,
+			CleanCacheSize: 0,
+			DirtyCacheSize: 0,
 		}}) // disable caching
 	} else {
 		tdb = triedb.NewDatabase(memDb, &triedb.Config{HashDB: &hashdb.Config{

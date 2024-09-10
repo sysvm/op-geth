@@ -69,7 +69,7 @@ type nodebufferlist struct {
 	baseMux   sync.RWMutex    // The mutex of base multiDifflayer and persistID.
 	flushMux  sync.RWMutex    // The mutex of flushing base multiDifflayer for reorg corner case.
 
-	isGenesis       bool           // Flag whether in init genesis
+	useBase         bool           // Flag if just use base buffer
 	isFlushing      atomic.Bool    // Flag indicates writing disk under background.
 	stopFlushing    atomic.Bool    // Flag stops writing disk under background.
 	stopCh          chan struct{}  // Trigger stop background event loop.
@@ -89,7 +89,7 @@ func newNodeBufferList(
 	keepFunc NotifyKeepFunc,
 	freezer *rawdb.ResettableFreezer,
 	fastRecovery bool,
-	isGenesis bool,
+	useBase bool,
 ) (*nodebufferlist, error) {
 	var (
 		rsevMdNum uint64
@@ -123,14 +123,13 @@ func newNodeBufferList(
 		nf  *nodebufferlist
 		err error
 	)
-	if !isGenesis && fastRecovery {
+	if !useBase && fastRecovery {
 		nf, err = recoverNodeBufferList(db, freezer, base, limit, wpBlocks, rsevMdNum, dlInMd)
 		if err != nil {
 			log.Error("Failed to recover node buffer list", "error", err)
 			return nil, err
 		}
 	} else {
-		log.Info("d3n82337")
 		ele := newMultiDifflayer(limit, 0, common.Hash{}, make(map[common.Hash]map[string]*trienode.Node), 0)
 		nf = &nodebufferlist{
 			db:              db,
@@ -143,7 +142,7 @@ func newNodeBufferList(
 			tail:            ele,
 			count:           1,
 			persistID:       rawdb.ReadPersistentStateID(db),
-			isGenesis:       isGenesis,
+			useBase:         useBase,
 			stopCh:          make(chan struct{}),
 			waitStopCh:      make(chan struct{}),
 			forceKeepCh:     make(chan struct{}),
@@ -319,6 +318,14 @@ func (nf *nodebufferlist) getLatestStatus() (common.Hash, uint64, error) {
 func (nf *nodebufferlist) node(owner common.Hash, path []byte, hash common.Hash) (node *trienode.Node, err error) {
 	nf.mux.RLock()
 	defer nf.mux.RUnlock()
+
+	if nf.useBase {
+		nf.baseMux.RLock()
+		node, err = nf.base.node(owner, path, hash)
+		nf.baseMux.RUnlock()
+		return node, err
+	}
+
 	find := func(nc *multiDifflayer) bool {
 		subset, ok := nc.nodes[owner]
 		if !ok {
@@ -357,6 +364,13 @@ func (nf *nodebufferlist) node(owner common.Hash, path []byte, hash common.Hash)
 func (nf *nodebufferlist) commit(root common.Hash, id uint64, block uint64, nodes map[common.Hash]map[string]*trienode.Node) trienodebuffer {
 	nf.mux.Lock()
 	defer nf.mux.Unlock()
+
+	if nf.useBase {
+		if err := nf.base.commit(root, id, block, 1, nodes); err != nil {
+			log.Crit("Failed to commit nodes to node buffer list", "error", err)
+		}
+		return nf
+	}
 
 	if nf.head == nil {
 		nf.head = newMultiDifflayer(nf.limit, 0, common.Hash{}, make(map[common.Hash]map[string]*trienode.Node), 0)
@@ -459,12 +473,7 @@ func (nf *nodebufferlist) flush(db ethdb.KeyValueStore, clean *fastcache.Cache, 
 		_ = nf.popBack()
 		return true
 	}
-
-	if !nf.isGenesis {
-		nf.traverseReverse(commitFunc)
-	} else {
-		nf.flushGenesis()
-	}
+	nf.traverseReverse(commitFunc)
 
 	persistID := nf.persistID + nf.base.layers
 	err := nf.base.flush(nf.db, nf.clean, persistID)
@@ -660,19 +669,6 @@ func (nf *nodebufferlist) traverseReverse(cb func(*multiDifflayer) bool) {
 		cursor = pre
 	}
 	return
-}
-
-// flushGenesis is used for flush genesis trie node
-func (nf *nodebufferlist) flushGenesis() {
-	commitFunc := func(buffer *multiDifflayer) bool {
-		err := nf.base.commit(buffer.root, buffer.id, buffer.block, buffer.layers, buffer.nodes)
-		if err != nil {
-			log.Error("Failed to commit nodes to base node buffer", "error", err)
-			return false
-		}
-		return false
-	}
-	nf.traverse(commitFunc)
 }
 
 // diffToBase calls traverseReverse and merges the multiDifflayer's nodes to

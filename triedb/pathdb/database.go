@@ -112,6 +112,7 @@ type Config struct {
 	NotifyKeep           NotifyKeepFunc // NotifyKeep is used to keep the proof which maybe queried by op-proposer.
 	JournalFilePath      string         // The journal file path
 	JournalFile          bool           // Whether to use journal file mode
+	UseBase              bool           // Flag if just use base for nodebufferlist
 }
 
 // sanitize checks the provided user configurations and changes anything that's
@@ -153,7 +154,7 @@ type Database struct {
 	readOnly     bool                     // Flag if database is opened in read only mode
 	waitSync     bool                     // Flag if database is deactivated due to initial state sync
 	fastRecovery bool                     // Flag if recover nodebufferlist
-	isGenesis    bool                     // Flag if in genesis state
+	useBase      bool                     // Flag if just use base buffer
 	bufferSize   int                      // Memory allowance (in bytes) for caching dirty nodes
 	config       *Config                  // Configuration for database
 	diskdb       ethdb.Database           // Persistent storage for matured trie nodes
@@ -177,13 +178,13 @@ func New(diskdb ethdb.Database, config *Config) *Database {
 		bufferSize: config.DirtyCacheSize,
 		config:     config,
 		diskdb:     diskdb,
+		useBase:    config.UseBase,
 	}
 
 	// Open the freezer for state history if the passed database contains an
 	// ancient store. Otherwise, all the relevant functionalities are disabled.
 	if ancient, err := diskdb.AncientDatadir(); err == nil && ancient != "" && !db.readOnly {
 		db.fastRecovery = checkAncientAndNodeBuffer(ancient, config.TrieNodeBufferType)
-		db.isGenesis = checkGenesis(ancient)
 		freezer, err := rawdb.NewStateFreezer(ancient, false, db.fastRecovery)
 		if err != nil {
 			log.Crit("Failed to open state history freezer", "err", err)
