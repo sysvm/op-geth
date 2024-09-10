@@ -463,7 +463,7 @@ func (nf *nodebufferlist) flush(db ethdb.KeyValueStore, clean *fastcache.Cache, 
 	if !nf.isGenesis {
 		nf.traverseReverse(commitFunc)
 	} else {
-		nf.forceFlush()
+		nf.flushGenesis()
 	}
 
 	persistID := nf.persistID + nf.base.layers
@@ -662,8 +662,8 @@ func (nf *nodebufferlist) traverseReverse(cb func(*multiDifflayer) bool) {
 	return
 }
 
-// forceFlush is used for init genesis
-func (nf *nodebufferlist) forceFlush() {
+// flushGenesis is used for flush genesis trie node
+func (nf *nodebufferlist) flushGenesis() {
 	commitFunc := func(buffer *multiDifflayer) bool {
 		err := nf.base.commit(buffer.root, buffer.id, buffer.block, buffer.layers, buffer.nodes)
 		if err != nil {

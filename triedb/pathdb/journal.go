@@ -269,7 +269,7 @@ func (db *Database) loadLayers() layer {
 	)
 
 	if (errors.Is(err, errMissJournal) || errors.Is(err, errUnmatchedJournal)) && db.fastRecovery &&
-		db.config.TrieNodeBufferType == NodeBufferList && !db.first {
+		db.config.TrieNodeBufferType == NodeBufferList && !db.isGenesis {
 		start := time.Now()
 		if db.freezer == nil {
 			log.Crit("Use unopened freezer db to recover node buffer list")
@@ -277,7 +277,7 @@ func (db *Database) loadLayers() layer {
 		log.Info("Recover node buffer list from ancient db")
 
 		nb, err = NewTrieNodeBuffer(db.diskdb, db.config.TrieNodeBufferType, db.bufferSize, nil, 0,
-			db.config.ProposeBlockInterval, db.config.NotifyKeep, db.freezer, db.fastRecovery, db.first)
+			db.config.ProposeBlockInterval, db.config.NotifyKeep, db.freezer, db.fastRecovery, db.isGenesis)
 		if err != nil {
 			log.Error("Failed to new trie node buffer for recovery", "error", err)
 		} else {
@@ -289,7 +289,7 @@ func (db *Database) loadLayers() layer {
 	if nb == nil || err != nil {
 		// Return single layer with persistent state.
 		nb, err = NewTrieNodeBuffer(db.diskdb, db.config.TrieNodeBufferType, db.bufferSize, nil, 0,
-			db.config.ProposeBlockInterval, db.config.NotifyKeep, nil, false, db.first)
+			db.config.ProposeBlockInterval, db.config.NotifyKeep, nil, false, db.isGenesis)
 		if err != nil {
 			log.Crit("Failed to new trie node buffer", "error", err)
 			return nil
@@ -676,8 +676,8 @@ func flattenTrieNodes(jn []journalNodes) map[common.Hash]map[string]*trienode.No
 }
 
 func checkAncientAndNodeBuffer(ancient string, nodeBufferType NodeBufferType) bool {
-	if !common.FileExist(filepath.Join(ancient, rawdb.StateFreezerName)) {
-		return true
+	if ok := checkGenesis(ancient); ok {
+		return ok
 	}
 
 	if rawdb.DetectTrieNodesFile(ancient) {
@@ -694,7 +694,7 @@ func checkAncientAndNodeBuffer(ancient string, nodeBufferType NodeBufferType) bo
 	return false
 }
 
-func checkFirst(ancient string) bool {
+func checkGenesis(ancient string) bool {
 	if !common.FileExist(filepath.Join(ancient, rawdb.StateFreezerName)) {
 		return true
 	}
