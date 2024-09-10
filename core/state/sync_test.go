@@ -47,6 +47,7 @@ func makeTestState(scheme string) (ethdb.Database, Database, *triedb.Database, c
 	config := &triedb.Config{Preimages: true}
 	if scheme == rawdb.PathScheme {
 		config.PathDB = pathdb.Defaults
+		config.PathDB.TrieNodeBufferType = pathdb.AsyncNodeBuffer
 	} else {
 		config.HashDB = hashdb.Defaults
 	}
