@@ -187,8 +187,10 @@ func flushAlloc(ga *types.GenesisAlloc, db ethdb.Database, triedb *triedb.Databa
 	if err != nil {
 		return err
 	}
+	log.Info("m2mdf223")
 	// Commit newly generated states into disk if it's not empty.
 	if root != types.EmptyRootHash {
+		log.Info("flushAlloc", "use base", triedb.Config().PathDB.UseBase)
 		if err := triedb.Commit(root, true); err != nil {
 			return err
 		}
@@ -547,6 +549,7 @@ func (g *Genesis) Commit(db ethdb.Database, triedb *triedb.Database) (*types.Blo
 	// All the checks has passed, flushAlloc the states derived from the genesis
 	// specification as well as the specification itself into the provided
 	// database.
+	log.Info("before flush", "use base", triedb.Config().PathDB.UseBase)
 	if err := flushAlloc(&g.Alloc, db, triedb, block.Hash()); err != nil {
 		return nil, err
 	}

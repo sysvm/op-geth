@@ -299,6 +299,7 @@ func (db *Database) Commit(root common.Hash, report bool) error {
 	defer db.lock.Unlock()
 	defer db.capLock.Unlock()
 
+	log.Info("pathdb commit", "use base", db.useBase)
 	// Short circuit if the mutation is not allowed.
 	if err := db.modifyAllowed(); err != nil {
 		return err
