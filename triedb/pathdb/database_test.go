@@ -515,7 +515,9 @@ func TestJournal(t *testing.T) {
 		t.Errorf("Failed to journal, err: %v", err)
 	}
 	tester.db.Close()
-	tester.db = New(tester.db.diskdb, nil)
+	pathConfig := Defaults
+	pathConfig.UseBase = true
+	tester.db = New(tester.db.diskdb, pathConfig)
 
 	// Verify states including disk layer and all diff on top.
 	for i := 0; i < len(tester.roots); i++ {
@@ -547,7 +549,9 @@ func TestCorruptedJournal(t *testing.T) {
 	rawdb.WriteTrieJournal(tester.db.diskdb, blob)
 
 	// Verify states, all not-yet-written states should be discarded
-	tester.db = New(tester.db.diskdb, nil)
+	pathConfig := Defaults
+	pathConfig.UseBase = true
+	tester.db = New(tester.db.diskdb, pathConfig)
 	for i := 0; i < len(tester.roots); i++ {
 		if tester.roots[i] == root {
 			if err := tester.verifyState(root); err != nil {
