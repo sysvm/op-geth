@@ -112,7 +112,7 @@ type Config struct {
 	NotifyKeep           NotifyKeepFunc // NotifyKeep is used to keep the proof which maybe queried by op-proposer.
 	JournalFilePath      string         // The journal file path
 	JournalFile          bool           // Whether to use journal file mode
-	UseBase              bool           // Flag if just use base for nodebufferlist
+	UseBase              bool           // Flag to use base and no other buffers for nodebufferlist, it's used for init genesis and unit tes
 }
 
 // sanitize checks the provided user configurations and changes anything that's
@@ -154,7 +154,7 @@ type Database struct {
 	readOnly     bool                     // Flag if database is opened in read only mode
 	waitSync     bool                     // Flag if database is deactivated due to initial state sync
 	fastRecovery bool                     // Flag if recover nodebufferlist
-	useBase      bool                     // Flag if just use base buffer
+	useBase      bool                     // Flag to use base and no other buffers for nodebufferlist
 	bufferSize   int                      // Memory allowance (in bytes) for caching dirty nodes
 	config       *Config                  // Configuration for database
 	diskdb       ethdb.Database           // Persistent storage for matured trie nodes

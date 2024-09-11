@@ -529,9 +529,9 @@ func (nf *nodebufferlist) getAllNodes() map[common.Hash]map[string]*trienode.Nod
 	defer nf.mux.Unlock()
 	defer nf.baseMux.Unlock()
 
-	if nf.useBase.Load() {
-		return nf.base.nodes
-	}
+	// if nf.useBase.Load() {
+	// 	return nf.base.nodes
+	// }
 
 	nc := newMultiDifflayer(nf.limit, 0, common.Hash{}, make(map[common.Hash]map[string]*trienode.Node), 0)
 	if err := nc.commit(nf.base.root, nf.base.id, nf.base.block, nf.layers, nf.base.nodes); err != nil {
