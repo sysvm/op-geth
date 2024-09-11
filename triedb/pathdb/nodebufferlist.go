@@ -366,21 +366,10 @@ func (nf *nodebufferlist) commit(root common.Hash, id uint64, block uint64, node
 	defer nf.mux.Unlock()
 
 	if nf.useBase.Load() {
-		for {
-			if nf.isFlushing.Swap(true) {
-				time.Sleep(time.Duration(DefaultBackgroundFlushInterval) * time.Second)
-				log.Info("waiting base node buffer to be flushed to disk")
-				continue
-			} else {
-				break
-			}
-		}
-		defer nf.isFlushing.Store(false)
+		nf.checkFlushing()
 
 		nf.baseMux.Lock()
-		// nf.flushMux.Lock()
 		defer nf.baseMux.Unlock()
-		// defer nf.flushMux.Unlock()
 		if err := nf.base.commit(root, id, block, 1, nodes); err != nil {
 			log.Crit("Failed to commit nodes to node buffer list", "error", err)
 		}
@@ -456,6 +445,7 @@ func (nf *nodebufferlist) flush(db ethdb.KeyValueStore, clean *fastcache.Cache, 
 	nf.forceKeepCh <- struct{}{}
 	<-nf.waitForceKeepCh
 
+	log.Info("23nu2fnuef2ju", "use base", nf.useBase.Load())
 	// hang user read/write and background write
 	nf.mux.Lock()
 	nf.baseMux.Lock()
@@ -542,10 +532,6 @@ func (nf *nodebufferlist) getAllNodes() map[common.Hash]map[string]*trienode.Nod
 	defer nf.mux.Unlock()
 	defer nf.baseMux.Unlock()
 
-	// if nf.useBase.Load() {
-	// 	return nf.base.nodes
-	// }
-
 	nc := newMultiDifflayer(nf.limit, 0, common.Hash{}, make(map[common.Hash]map[string]*trienode.Node), 0)
 	if err := nc.commit(nf.base.root, nf.base.id, nf.base.block, nf.layers, nf.base.nodes); err != nil {
 		log.Crit("failed to commit nodes to node buffer", "error", err)
@@ -562,16 +548,7 @@ func (nf *nodebufferlist) getAllNodes() map[common.Hash]map[string]*trienode.Nod
 
 // getLayers return the size of cached difflayers.
 func (nf *nodebufferlist) getLayers() uint64 {
-	for {
-		if nf.isFlushing.Swap(true) {
-			time.Sleep(time.Duration(DefaultBackgroundFlushInterval) * time.Second)
-			log.Info("waiting base node buffer to be flushed to disk")
-			continue
-		} else {
-			break
-		}
-	}
-	defer nf.isFlushing.Store(false)
+	nf.checkFlushing()
 
 	nf.mux.RLock()
 	nf.baseMux.RLock()
@@ -871,6 +848,20 @@ func (nf *nodebufferlist) report() {
 		"basesize", common.StorageSize(nf.base.size), "baselayers", nf.base.layers,
 	}
 	log.Info("node buffer list info", context...)
+}
+
+func (nf *nodebufferlist) checkFlushing() {
+	for {
+		if nf.isFlushing.Swap(true) {
+			time.Sleep(time.Duration(DefaultBackgroundFlushInterval) * time.Second)
+			log.Info("waiting base node buffer to be flushed to disk")
+			continue
+		} else {
+			break
+		}
+	}
+	defer nf.isFlushing.Store(false)
+	return
 }
 
 var _ layer = &proposedBlockReader{}

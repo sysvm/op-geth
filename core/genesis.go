@@ -317,6 +317,7 @@ func SetupGenesisBlockWithOverride(db ethdb.Database, triedb *triedb.Database, g
 		} else {
 			log.Info("Writing custom genesis block")
 		}
+		log.Info("23n8923u8u23r3", "db use base", triedb.Config().PathDB.UseBase)
 		applyOverrides(genesis.Config)
 		block, err := genesis.Commit(db, triedb)
 		if err != nil {

@@ -181,6 +181,7 @@ func New(diskdb ethdb.Database, config *Config) *Database {
 		useBase:    config.UseBase,
 	}
 
+	log.Info("d2nid23nf390293", "db use base", db.useBase, "config use base", config.UseBase)
 	// Open the freezer for state history if the passed database contains an
 	// ancient store. Otherwise, all the relevant functionalities are disabled.
 	if ancient, err := diskdb.AncientDatadir(); err == nil && ancient != "" && !db.readOnly {
