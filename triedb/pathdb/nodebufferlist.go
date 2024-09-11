@@ -151,7 +151,9 @@ func newNodeBufferList(
 		nf.useBase.Store(useBase)
 	}
 
-	go nf.loop()
+	if !nf.useBase.Load() {
+		go nf.loop()
+	}
 
 	log.Info("new node buffer list", "proposed block interval", nf.wpBlocks,
 		"reserve multi difflayers", nf.rsevMdNum, "difflayers in multidifflayer", nf.dlInMd,
