@@ -228,9 +228,6 @@ func initGenesis(ctx *cli.Context) error {
 		defer chaindb.Close()
 
 		triedb := utils.MakeTrieDatabase(ctx, stack, chaindb, ctx.Bool(utils.CachePreimagesFlag.Name), false, genesis.IsVerkle())
-		if triedb.Config().PathDB != nil {
-			triedb.Config().PathDB.UseBase = true
-		}
 		defer triedb.Close()
 
 		_, hash, err := core.SetupGenesisBlockWithOverride(chaindb, triedb, genesis, &overrides)

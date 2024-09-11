@@ -149,7 +149,6 @@ func newNodeBufferList(
 			keepFunc:        keepFunc,
 		}
 		nf.useBase.Store(useBase)
-		log.Info("23hd312hnud91e9dnm", "nf use base", useBase, "load", nf.useBase.Load())
 	}
 
 	go nf.loop()
@@ -446,7 +445,6 @@ func (nf *nodebufferlist) flush(db ethdb.KeyValueStore, clean *fastcache.Cache, 
 	nf.forceKeepCh <- struct{}{}
 	<-nf.waitForceKeepCh
 
-	log.Info("23nu2fnuef2ju", "use base", nf.useBase.Load())
 	// hang user read/write and background write
 	nf.mux.Lock()
 	nf.baseMux.Lock()

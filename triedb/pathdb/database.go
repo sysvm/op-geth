@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -181,10 +182,14 @@ func New(diskdb ethdb.Database, config *Config) *Database {
 		useBase:    config.UseBase,
 	}
 
-	log.Info("d2nid23nf390293", "db use base", db.useBase, "config use base", config.UseBase)
+	if db.useBase {
+
+	}
+
 	// Open the freezer for state history if the passed database contains an
 	// ancient store. Otherwise, all the relevant functionalities are disabled.
 	if ancient, err := diskdb.AncientDatadir(); err == nil && ancient != "" && !db.readOnly {
+		db.useBase = !common.FileExist(filepath.Join(ancient, rawdb.StateFreezerName))
 		db.fastRecovery = checkAncientAndNodeBuffer(ancient, config.TrieNodeBufferType)
 		freezer, err := rawdb.NewStateFreezer(ancient, false, db.fastRecovery)
 		if err != nil {
@@ -299,7 +304,6 @@ func (db *Database) Commit(root common.Hash, report bool) error {
 	defer db.lock.Unlock()
 	defer db.capLock.Unlock()
 
-	log.Info("pathdb commit", "use base", db.useBase)
 	// Short circuit if the mutation is not allowed.
 	if err := db.modifyAllowed(); err != nil {
 		return err
