@@ -365,7 +365,7 @@ func (db *Database) loadDiskLayer(r *rlp.Stream, journalTypeForReader JournalTyp
 
 	// Calculate the internal state transitions by id difference.
 	nb, err := NewTrieNodeBuffer(db.diskdb, db.config.TrieNodeBufferType, db.bufferSize, nodes, id-stored, db.config.ProposeBlockInterval,
-		db.config.NotifyKeep, nil, false, false)
+		db.config.NotifyKeep, nil, false, db.useBase)
 	if err != nil {
 		log.Error("Failed to new trie node buffer", "error", err)
 		return nil, err
