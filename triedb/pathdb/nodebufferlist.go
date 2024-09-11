@@ -149,6 +149,7 @@ func newNodeBufferList(
 			keepFunc:        keepFunc,
 		}
 		nf.useBase.Store(useBase)
+		log.Info("23hd312hnud91e9dnm", "nf use base", useBase, "load", nf.useBase.Load())
 	}
 
 	go nf.loop()
