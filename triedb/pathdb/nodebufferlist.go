@@ -366,10 +366,21 @@ func (nf *nodebufferlist) commit(root common.Hash, id uint64, block uint64, node
 	defer nf.mux.Unlock()
 
 	if nf.useBase.Load() {
+		for {
+			if nf.isFlushing.Swap(true) {
+				time.Sleep(time.Duration(DefaultBackgroundFlushInterval) * time.Second)
+				log.Info("waiting base node buffer to be flushed to disk")
+				continue
+			} else {
+				break
+			}
+		}
+		defer nf.isFlushing.Store(false)
+
 		nf.baseMux.Lock()
-		nf.flushMux.Lock()
+		// nf.flushMux.Lock()
 		defer nf.baseMux.Unlock()
-		defer nf.flushMux.Unlock()
+		// defer nf.flushMux.Unlock()
 		if err := nf.base.commit(root, id, block, 1, nodes); err != nil {
 			log.Crit("Failed to commit nodes to node buffer list", "error", err)
 		}
