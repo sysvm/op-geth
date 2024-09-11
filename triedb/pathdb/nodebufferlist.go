@@ -151,9 +151,7 @@ func newNodeBufferList(
 		nf.useBase.Store(useBase)
 	}
 
-	if !nf.useBase.Load() {
-		go nf.loop()
-	}
+	go nf.loop()
 
 	log.Info("new node buffer list", "proposed block interval", nf.wpBlocks,
 		"reserve multi difflayers", nf.rsevMdNum, "difflayers in multidifflayer", nf.dlInMd,
@@ -369,10 +367,12 @@ func (nf *nodebufferlist) commit(root common.Hash, id uint64, block uint64, node
 
 	if nf.useBase.Load() {
 		nf.baseMux.Lock()
+		nf.flushMux.Lock()
+		defer nf.baseMux.Unlock()
+		defer nf.flushMux.Unlock()
 		if err := nf.base.commit(root, id, block, 1, nodes); err != nil {
 			log.Crit("Failed to commit nodes to node buffer list", "error", err)
 		}
-		nf.baseMux.Unlock()
 		return nf
 	}
 
