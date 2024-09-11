@@ -103,6 +103,7 @@ func newTester(t *testing.T, historyLimit uint64) *tester {
 			StateHistory:   historyLimit,
 			CleanCacheSize: 256 * 1024,
 			DirtyCacheSize: 256 * 1024,
+			UseBase:        true,
 		})
 		obj = &tester{
 			db:           db,

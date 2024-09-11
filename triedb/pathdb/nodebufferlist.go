@@ -366,9 +366,11 @@ func (nf *nodebufferlist) commit(root common.Hash, id uint64, block uint64, node
 	defer nf.mux.Unlock()
 
 	if nf.useBase.Load() {
+		nf.baseMux.Lock()
 		if err := nf.base.commit(root, id, block, 1, nodes); err != nil {
 			log.Crit("Failed to commit nodes to node buffer list", "error", err)
 		}
+		nf.baseMux.Unlock()
 		return nf
 	}
 
