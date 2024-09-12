@@ -123,13 +123,16 @@ func newNodeBufferList(
 		nf  *nodebufferlist
 		err error
 	)
+	log.Info("newNodeBufferList 111111", "useBase", useBase, "fastRecovery", fastRecovery)
 	if !useBase && fastRecovery {
+		log.Info("Do recover")
 		nf, err = recoverNodeBufferList(db, freezer, base, limit, wpBlocks, rsevMdNum, dlInMd)
 		if err != nil {
 			log.Error("Failed to recover node buffer list", "error", err)
 			return nil, err
 		}
 	} else {
+		log.Info("Not recover")
 		ele := newMultiDifflayer(limit, 0, common.Hash{}, make(map[common.Hash]map[string]*trienode.Node), 0)
 		nf = &nodebufferlist{
 			db:              db,

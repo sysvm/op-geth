@@ -191,6 +191,7 @@ func New(diskdb ethdb.Database, config *Config) *Database {
 		}
 		db.freezer = freezer
 	}
+	log.Info("New pathdb", "useBase", db.useBase, "fastRecovery", db.fastRecovery)
 
 	// Construct the layer tree by resolving the in-disk singleton state
 	// and in-memory layer journal.

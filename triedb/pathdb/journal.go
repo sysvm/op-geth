@@ -268,8 +268,11 @@ func (db *Database) loadLayers() layer {
 		stateID = rawdb.ReadPersistentStateID(db.diskdb)
 	)
 
+	log.Info("before recover", "buffer type", db.config.TrieNodeBufferType, "fastRecovery", db.fastRecovery,
+		"use base", db.useBase, "err", err)
 	if (errors.Is(err, errMissJournal) || errors.Is(err, errUnmatchedJournal)) && db.fastRecovery &&
 		db.config.TrieNodeBufferType == NodeBufferList && !db.useBase {
+		log.Info("in recover")
 		start := time.Now()
 		if db.freezer == nil {
 			log.Crit("Use unopened freezer db to recover node buffer list")
@@ -287,6 +290,7 @@ func (db *Database) loadLayers() layer {
 		}
 	}
 	if nb == nil || err != nil {
+		log.Info("Maybe failed to recover", "err", err)
 		// Return single layer with persistent state.
 		nb, err = NewTrieNodeBuffer(db.diskdb, db.config.TrieNodeBufferType, db.bufferSize, nil, 0,
 			db.config.ProposeBlockInterval, db.config.NotifyKeep, nil, false, db.useBase)
