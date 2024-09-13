@@ -369,7 +369,16 @@ func (nf *nodebufferlist) commit(root common.Hash, id uint64, block uint64, node
 	defer nf.mux.Unlock()
 
 	if nf.useBase.Load() {
-		nf.checkFlushing()
+		for {
+			if nf.isFlushing.Swap(true) {
+				time.Sleep(time.Duration(DefaultBackgroundFlushInterval) * time.Second)
+				log.Info("waiting base node buffer to be flushed to disk")
+				continue
+			} else {
+				break
+			}
+		}
+		defer nf.isFlushing.Store(false)
 
 		nf.baseMux.Lock()
 		defer nf.baseMux.Unlock()
@@ -550,7 +559,16 @@ func (nf *nodebufferlist) getAllNodes() map[common.Hash]map[string]*trienode.Nod
 
 // getLayers return the size of cached difflayers.
 func (nf *nodebufferlist) getLayers() uint64 {
-	nf.checkFlushing()
+	for {
+		if nf.isFlushing.Swap(true) {
+			time.Sleep(time.Duration(DefaultBackgroundFlushInterval) * time.Second)
+			log.Info("waiting base node buffer to be flushed to disk")
+			continue
+		} else {
+			break
+		}
+	}
+	defer nf.isFlushing.Store(false)
 
 	nf.mux.RLock()
 	nf.baseMux.RLock()
@@ -850,20 +868,6 @@ func (nf *nodebufferlist) report() {
 		"basesize", common.StorageSize(nf.base.size), "baselayers", nf.base.layers,
 	}
 	log.Info("node buffer list info", context...)
-}
-
-func (nf *nodebufferlist) checkFlushing() {
-	for {
-		if nf.isFlushing.Swap(true) {
-			time.Sleep(time.Duration(DefaultBackgroundFlushInterval) * time.Second)
-			log.Info("waiting base node buffer to be flushed to disk")
-			continue
-		} else {
-			break
-		}
-	}
-	defer nf.isFlushing.Store(false)
-	return
 }
 
 var _ layer = &proposedBlockReader{}
