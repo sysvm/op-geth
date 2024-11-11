@@ -96,7 +96,7 @@ type Database struct {
 func NewDatabase(diskdb ethdb.Database, config *Config) *Database {
 	// Sanitize the config and use the default one if it's not specified.
 	var triediskdb ethdb.Database
-	// log.Info("eh1hhud", "ProposeBlockInterval", config.PathDB.ProposeBlockInterval, "diskdb", diskdb != nil)
+	// log.Info("eh1hhud", "PathDB", config.PathDB)
 	if diskdb != nil && diskdb.StateStore() != nil {
 		triediskdb = diskdb.StateStore()
 		log.Info("nnnnnn")
@@ -142,7 +142,7 @@ func NewDatabase(diskdb ethdb.Database, config *Config) *Database {
 		}
 		db.backend = hashdb.New(triediskdb, config.HashDB, trie.MerkleResolver{})
 	} else if config.PathDB != nil {
-		log.Info("r238h238h78h3")
+		log.Info("r238h238h78h3", "ProposeBlockInterval", config.PathDB.ProposeBlockInterval)
 		if rawdb.ReadStateScheme(triediskdb) == rawdb.HashScheme {
 			log.Warn("incompatible state scheme", "old", rawdb.HashScheme, "new", rawdb.PathScheme)
 		}
