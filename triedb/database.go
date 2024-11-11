@@ -96,7 +96,7 @@ type Database struct {
 func NewDatabase(diskdb ethdb.Database, config *Config) *Database {
 	// Sanitize the config and use the default one if it's not specified.
 	var triediskdb ethdb.Database
-	log.Info("eh1hhud", "PathDB", config.PathDB != nil)
+	// log.Info("eh1hhud", "PathDB", config.PathDB != nil)
 	if diskdb != nil && diskdb.StateStore() != nil {
 		triediskdb = diskdb.StateStore()
 		log.Info("nnnnnn")

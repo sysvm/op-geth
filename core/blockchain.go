@@ -315,8 +315,8 @@ func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, genesis *Genesis
 	proofKeeper := newProofKeeper(opts)
 	// Open trie database with provided config
 	trieConfig := cacheConfig.triedbConfig(proofKeeper.GetNotifyKeepRecordFunc())
+	log.Info("NewBlockChain", "ProposeBlockInterval", trieConfig.PathDB.ProposeBlockInterval)
 	triedb := triedb.NewDatabase(db, trieConfig)
-	log.Info("NewBlockChain", "ProposeBlockInterval", triedb.Config().PathDB.ProposeBlockInterval)
 
 	// Setup the genesis block, commit the provided genesis specification
 	// to database if the genesis block is not present yet, or load the
