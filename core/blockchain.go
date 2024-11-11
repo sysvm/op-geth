@@ -178,6 +178,7 @@ func (c *CacheConfig) triedbConfig(keepFunc pathdb.NotifyKeepFunc) *triedb.Confi
 		Preimages: c.Preimages,
 		NoTries:   c.NoTries,
 	}
+	log.Info("triedbConfig", "scheme", c.StateScheme)
 	if c.StateScheme == rawdb.HashScheme {
 		config.HashDB = &hashdb.Config{
 			CleanCacheSize: c.TrieCleanLimit * 1024 * 1024,
