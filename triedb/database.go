@@ -96,7 +96,7 @@ type Database struct {
 func NewDatabase(diskdb ethdb.Database, config *Config) *Database {
 	// Sanitize the config and use the default one if it's not specified.
 	var triediskdb ethdb.Database
-	log.Info("eh1hhud", "ProposeBlockInterval", config.PathDB.ProposeBlockInterval, "diskdb", diskdb != nil)
+	// log.Info("eh1hhud", "ProposeBlockInterval", config.PathDB.ProposeBlockInterval, "diskdb", diskdb != nil)
 	if diskdb != nil && diskdb.StateStore() != nil {
 		triediskdb = diskdb.StateStore()
 		log.Info("nnnnnn")
@@ -130,6 +130,7 @@ func NewDatabase(diskdb ethdb.Database, config *Config) *Database {
 		diskdb:    triediskdb,
 		preimages: preimages,
 	}
+	// log.Info("eh1hhud", "ProposeBlockInterval", config.PathDB.ProposeBlockInterval)
 	/*
 	 * 1. First, initialize db according to the user config
 	 * 2. Second, initialize the db according to the scheme already used by db
@@ -141,12 +142,15 @@ func NewDatabase(diskdb ethdb.Database, config *Config) *Database {
 		}
 		db.backend = hashdb.New(triediskdb, config.HashDB, trie.MerkleResolver{})
 	} else if config.PathDB != nil {
+		log.Info("r238h238h78h3")
 		if rawdb.ReadStateScheme(triediskdb) == rawdb.HashScheme {
 			log.Warn("incompatible state scheme", "old", rawdb.HashScheme, "new", rawdb.PathScheme)
 		}
 		db.backend = pathdb.New(triediskdb, config.PathDB)
 	} else if strings.Compare(dbScheme, rawdb.PathScheme) == 0 {
+		log.Info("hhuh8h8")
 		if config.PathDB == nil {
+			log.Info("nnun")
 			config.PathDB = pathdb.Defaults
 		}
 		db.backend = pathdb.New(triediskdb, config.PathDB)
