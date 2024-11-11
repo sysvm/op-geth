@@ -96,6 +96,7 @@ func newNodeBufferList(
 		dlInMd    uint64
 		wpBlocks  = proposeBlockInterval
 	)
+	log.Info("print logs", "wpBlocks", wpBlocks, "proposeBlockInterval", proposeBlockInterval)
 	if wpBlocks == 0 {
 		rsevMdNum = DefaultReserveMultiDifflayerNumber
 		wpBlocks = DefaultProposeBlockInterval
