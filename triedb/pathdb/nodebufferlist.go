@@ -123,7 +123,6 @@ func newNodeBufferList(
 		keepFunc:        keepFunc,
 	}
 
-	fmt.Println("useBase, fastRecovery", useBase, fastRecovery)
 	if !useBase && fastRecovery {
 		if freezer == nil {
 			log.Crit("Use unopened freezer db to recover node buffer list")

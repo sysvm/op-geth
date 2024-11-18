@@ -250,7 +250,6 @@ func (db *Database) loadLayers() layer {
 	_, root := rawdb.ReadAccountTrieNode(db.diskdb, nil)
 	root = types.TrieRootHash(root)
 
-	fmt.Println("1 useBase, fastRecovery", db.useBase, db.fastRecovery)
 	// Load the layers by resolving the journal
 	head, err := db.loadJournal(root)
 	if err == nil {
@@ -269,7 +268,6 @@ func (db *Database) loadLayers() layer {
 		stateID = rawdb.ReadPersistentStateID(db.diskdb)
 	)
 
-	fmt.Println("2 useBase, fastRecovery", db.useBase, db.fastRecovery)
 	if (errors.Is(err, errMissJournal) || errors.Is(err, errUnmatchedJournal)) && db.fastRecovery &&
 		db.config.TrieNodeBufferType == NodeBufferList && !db.useBase {
 		start := time.Now()
@@ -362,7 +360,6 @@ func (db *Database) loadDiskLayer(r *rlp.Stream, journalTypeForReader JournalTyp
 		}
 	}
 
-	fmt.Println("3 useBase, fastRecovery", db.useBase, db.fastRecovery)
 	// Calculate the internal state transitions by id difference.
 	nb, err := NewTrieNodeBuffer(db.diskdb, db.config.TrieNodeBufferType, db.bufferSize, nodes, id-stored, db.config.ProposeBlockInterval,
 		db.config.NotifyKeep, db.freezer, db.fastRecovery, db.useBase)
@@ -374,11 +371,11 @@ func (db *Database) loadDiskLayer(r *rlp.Stream, journalTypeForReader JournalTyp
 	if db.config.TrieNodeBufferType == NodeBufferList && !db.useBase {
 		recoveredRoot, recoveredStateID, _ := nb.getLatestStatus()
 		if recoveredRoot != root && recoveredStateID != id {
-			log.Error("unequal state root and state id")
+			log.Error("Recovering state root and state id are different from recording ones")
 			return nil, errors.New("Unmatched root and state id with recovered")
 		}
 
-		log.Info("Finish recovering node buffer list", "latest root hash", recoveredRoot.String(),
+		log.Info("Disk layer finishes recovering node buffer list", "latest root hash", recoveredRoot.String(),
 			"latest state_id", recoveredStateID)
 	}
 
