@@ -371,7 +371,8 @@ func (db *Database) loadDiskLayer(r *rlp.Stream, journalTypeForReader JournalTyp
 	if db.config.TrieNodeBufferType == NodeBufferList && !db.useBase {
 		recoveredRoot, recoveredStateID, _ := nb.getLatestStatus()
 		if recoveredRoot != root && recoveredStateID != id {
-			log.Error("Recovered state root and state id are different from recording ones")
+			log.Error("Recovered state root and state id are different from recording ones",
+				"recovered_root", recoveredRoot, "root", root, "recovered_state_id", recoveredStateID, "id", id)
 			return nil, errors.New("Unmatched root and state id with recovered")
 		}
 
