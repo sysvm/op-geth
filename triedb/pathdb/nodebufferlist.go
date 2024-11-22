@@ -84,6 +84,7 @@ func newNodeBufferList(
 	db ethdb.Database,
 	limit uint64,
 	nodes map[common.Hash]map[string]*trienode.Node,
+	nodesArray []nblJournalData,
 	layers uint64,
 	proposeBlockInterval uint64,
 	keepFunc NotifyKeepFunc,
@@ -108,13 +109,32 @@ func newNodeBufferList(
 		dlInMd = wpBlocks
 	}
 
+	if nodes == nil {
+		nodes = make(map[common.Hash]map[string]*trienode.Node)
+	}
+
+	var base *multiDifflayer
+	if nodesArray != nil {
+		base = newMultiDifflayer(limit, nodesArray[0].size, nodesArray[0].root, nodesArray[0].nodes, nodesArray[0].layers)
+	} else if nodes != nil {
+		var size uint64
+		for _, subset := range nodes {
+			for path, n := range subset {
+				size += uint64(len(n.Blob) + len(path))
+			}
+		}
+		base = newMultiDifflayer(limit, size, common.Hash{}, nodes, layers)
+	} else {
+		base = newMultiDifflayer(limit, 0, common.Hash{}, make(map[common.Hash]map[string]*trienode.Node), 0)
+	}
+
 	nf := &nodebufferlist{
 		db:              db,
 		wpBlocks:        wpBlocks,
 		rsevMdNum:       rsevMdNum,
 		dlInMd:          dlInMd,
 		limit:           limit,
-		base:            newMultiDifflayer(limit, 0, common.Hash{}, make(map[common.Hash]map[string]*trienode.Node), 0),
+		base:            base,
 		persistID:       rawdb.ReadPersistentStateID(db),
 		stopCh:          make(chan struct{}),
 		waitStopCh:      make(chan struct{}),
@@ -123,7 +143,9 @@ func newNodeBufferList(
 		keepFunc:        keepFunc,
 	}
 
-	if !useBase && fastRecovery {
+	if nodesArray != nil {
+		nf.recoverJournalData(nodesArray)
+	} else if !useBase && fastRecovery {
 		if freezer == nil {
 			log.Crit("Use unopened freezer db to recover node buffer list")
 		}
@@ -527,6 +549,43 @@ func (nf *nodebufferlist) getAllNodes() map[common.Hash]map[string]*trienode.Nod
 	}
 	nf.traverseReverse(merge)
 	return nc.nodes
+}
+
+func (nf *nodebufferlist) recoverJournalData(nodesArray []nblJournalData) {
+	// skip index 0, it belongs to base buffer
+	for i := 1; i < len(nodesArray)-1; i++ {
+		mdl := newMultiDifflayer(nf.limit, nodesArray[i].size, nodesArray[i].root, nodesArray[i].nodes, nodesArray[i].layers)
+		nf.pushFront(mdl)
+	}
+	log.Info("recover journal data", "nf count", nf.count, "node array", len(nodesArray))
+}
+
+// getMultiLayerNodes return all the trie nodes are cached in trienodebuffer.
+func (nf *nodebufferlist) getMultiLayerNodes() []nblJournalData {
+	nf.mux.Lock()
+	nf.baseMux.Lock()
+	defer nf.mux.Unlock()
+	defer nf.baseMux.Unlock()
+
+	nodesArray := make([]nblJournalData, 0, nf.count+1)
+	nodesArray = append(nodesArray, nblJournalData{
+		root:   nf.base.root,
+		layers: nf.base.layers,
+		size:   nf.base.size,
+		nodes:  nf.base.nodes,
+	})
+
+	merge := func(buffer *multiDifflayer) bool {
+		nodesArray = append(nodesArray, nblJournalData{
+			root:   buffer.root,
+			layers: buffer.layers,
+			size:   buffer.size,
+			nodes:  buffer.nodes,
+		})
+		return true
+	}
+	nf.traverseReverse(merge)
+	return nodesArray
 }
 
 // getLayers return the size of cached difflayers.

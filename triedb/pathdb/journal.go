@@ -61,6 +61,14 @@ type journalNodes struct {
 	Nodes []journalNode
 }
 
+// nblJournalData is used for journal nodebufferlist data in journa file.
+type nblJournalData struct {
+	root   common.Hash
+	layers uint64
+	size   uint64
+	nodes  map[common.Hash]map[string]*trienode.Node
+}
+
 // journalAccounts represents a list accounts belong to the layer.
 type journalAccounts struct {
 	Addresses []common.Address
@@ -273,7 +281,7 @@ func (db *Database) loadLayers() layer {
 		start := time.Now()
 		log.Info("Recover node buffer list from ancient db")
 
-		nb, err = NewTrieNodeBuffer(db.diskdb, db.config.TrieNodeBufferType, db.bufferSize, nil, 0,
+		nb, err = NewTrieNodeBuffer(db.diskdb, db.config.TrieNodeBufferType, db.bufferSize, nil, nil, 0,
 			db.config.ProposeBlockInterval, db.config.NotifyKeep, db.freezer, db.fastRecovery, db.useBase)
 		if err != nil {
 			log.Error("Failed to new trie node buffer for recovery", "error", err)
@@ -285,7 +293,7 @@ func (db *Database) loadLayers() layer {
 	}
 	if nb == nil || err != nil {
 		// Return single layer with persistent state.
-		nb, err = NewTrieNodeBuffer(db.diskdb, db.config.TrieNodeBufferType, db.bufferSize, nil, 0,
+		nb, err = NewTrieNodeBuffer(db.diskdb, db.config.TrieNodeBufferType, db.bufferSize, nil, nil, 0,
 			db.config.ProposeBlockInterval, db.config.NotifyKeep, nil, false, db.useBase)
 		if err != nil {
 			log.Crit("Failed to new trie node buffer", "error", err)
@@ -330,22 +338,32 @@ func (db *Database) loadDiskLayer(r *rlp.Stream, journalTypeForReader JournalTyp
 	if stored > id {
 		return nil, fmt.Errorf("invalid state id: stored %d resolved %d", stored, id)
 	}
-	// Resolve nodes cached in node buffer
-	var encoded []journalNodes
-	if err := journalBuf.Decode(&encoded); err != nil {
-		return nil, fmt.Errorf("failed to load disk nodes: %v", err)
-	}
-	nodes := make(map[common.Hash]map[string]*trienode.Node)
-	for _, entry := range encoded {
-		subset := make(map[string]*trienode.Node)
-		for _, n := range entry.Nodes {
-			if len(n.Blob) > 0 {
-				subset[string(n.Path)] = trienode.New(crypto.Keccak256Hash(n.Blob), n.Blob)
-			} else {
-				subset[string(n.Path)] = trienode.NewDeleted()
-			}
+
+	var nodes map[common.Hash]map[string]*trienode.Node
+	var nodesArray []nblJournalData
+
+	if db.config.TrieNodeBufferType == NodeBufferList && journalTypeForReader == JournalFileType {
+		if err := journalBuf.Decode(&nodesArray); err != nil {
+			return nil, fmt.Errorf("11 failed to load disk nodes: %v", err)
 		}
-		nodes[entry.Owner] = subset
+	} else {
+		// Resolve nodes cached in node buffer
+		var encoded []journalNodes
+		if err := journalBuf.Decode(&encoded); err != nil {
+			return nil, fmt.Errorf("failed to load disk nodes: %v", err)
+		}
+		nodes = make(map[common.Hash]map[string]*trienode.Node)
+		for _, entry := range encoded {
+			subset := make(map[string]*trienode.Node)
+			for _, n := range entry.Nodes {
+				if len(n.Blob) > 0 {
+					subset[string(n.Path)] = trienode.New(crypto.Keccak256Hash(n.Blob), n.Blob)
+				} else {
+					subset[string(n.Path)] = trienode.NewDeleted()
+				}
+			}
+			nodes[entry.Owner] = subset
+		}
 	}
 
 	if journalTypeForReader == JournalFileType {
@@ -361,7 +379,7 @@ func (db *Database) loadDiskLayer(r *rlp.Stream, journalTypeForReader JournalTyp
 	}
 
 	// Calculate the internal state transitions by id difference.
-	nb, err := NewTrieNodeBuffer(db.diskdb, db.config.TrieNodeBufferType, db.bufferSize, nodes, id-stored, db.config.ProposeBlockInterval,
+	nb, err := NewTrieNodeBuffer(db.diskdb, db.config.TrieNodeBufferType, db.bufferSize, nodes, nodesArray, id-stored, db.config.ProposeBlockInterval,
 		db.config.NotifyKeep, db.freezer, db.fastRecovery, db.useBase)
 	if err != nil {
 		log.Error("Failed to new trie node buffer", "error", err)
@@ -494,18 +512,28 @@ func (dl *diskLayer) journal(w io.Writer, journalType JournalType) error {
 	if err := rlp.Encode(journalBuf, dl.id); err != nil {
 		return err
 	}
+
 	// Step three, write all unwritten nodes into the journal
-	bufferNodes := dl.buffer.getAllNodes()
-	nodes := make([]journalNodes, 0, len(bufferNodes))
-	for owner, subset := range bufferNodes {
-		entry := journalNodes{Owner: owner}
-		for path, node := range subset {
-			entry.Nodes = append(entry.Nodes, journalNode{Path: []byte(path), Blob: node.Blob})
+	if _, ok := dl.buffer.(*nodebufferlist); ok && journalType == JournalFileType {
+		nodes := dl.buffer.getMultiLayerNodes()
+		if err := rlp.Encode(journalBuf, nodes); err != nil {
+			return err
 		}
-		nodes = append(nodes, entry)
-	}
-	if err := rlp.Encode(journalBuf, nodes); err != nil {
-		return err
+		log.Info("Journal file and node buffer list", "multi layer nodes count", len(nodes))
+	} else {
+		bufferNodes := dl.buffer.getAllNodes()
+		nodes := make([]journalNodes, 0, len(bufferNodes))
+		for owner, subset := range bufferNodes {
+			entry := journalNodes{Owner: owner}
+			for path, node := range subset {
+				entry.Nodes = append(entry.Nodes, journalNode{Path: []byte(path), Blob: node.Blob})
+			}
+			nodes = append(nodes, entry)
+		}
+		if err := rlp.Encode(journalBuf, nodes); err != nil {
+			return err
+		}
+		log.Info("get all nodes", "nodes count", len(nodes))
 	}
 
 	// Store the journal buf into w and calculate checksum
@@ -523,7 +551,7 @@ func (dl *diskLayer) journal(w io.Writer, journalType JournalType) error {
 		}
 	}
 
-	log.Info("Journaled pathdb disk layer", "root", dl.root, "nodes", len(bufferNodes))
+	log.Info("Journaled pathdb disk layer", "root", dl.root)
 	return nil
 }
 

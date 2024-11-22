@@ -311,3 +311,7 @@ func (b *nodebuffer) proposedBlockReader(blockRoot common.Hash) (layer, error) {
 func (b *nodebuffer) getLatestStatus() (common.Hash, uint64, error) {
 	return common.Hash{}, 0, errors.New("unsupported method for node buffer")
 }
+
+func (b *nodebuffer) getMultiLayerNodes() []nblJournalData {
+	return nil
+}
