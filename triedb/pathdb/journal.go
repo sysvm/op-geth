@@ -342,7 +342,7 @@ func (db *Database) loadDiskLayer(r *rlp.Stream, journalTypeForReader JournalTyp
 	var nodes map[common.Hash]map[string]*trienode.Node
 	var nodesArray []nblJournalData
 
-	if db.config.TrieNodeBufferType == NodeBufferList && journalTypeForReader == JournalFileType {
+	if db.config.TrieNodeBufferType == NodeBufferList && journalTypeForReader == JournalFileType && !db.fastRecovery {
 		if err := journalBuf.Decode(&nodesArray); err != nil {
 			return nil, fmt.Errorf("11 failed to load disk nodes: %v", err)
 		}
@@ -514,7 +514,7 @@ func (dl *diskLayer) journal(w io.Writer, journalType JournalType) error {
 	}
 
 	// Step three, write all unwritten nodes into the journal
-	if _, ok := dl.buffer.(*nodebufferlist); ok && journalType == JournalFileType {
+	if _, ok := dl.buffer.(*nodebufferlist); ok && journalType == JournalFileType && !dl.db.fastRecovery {
 		nodes := dl.buffer.getMultiLayerNodes()
 		if err := rlp.Encode(journalBuf, nodes); err != nil {
 			return err
