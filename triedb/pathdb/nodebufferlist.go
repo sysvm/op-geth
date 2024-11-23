@@ -594,6 +594,11 @@ func (nf *nodebufferlist) getMultiLayerNodes() []nblJournalData {
 		return true
 	}
 	nf.traverseReverse(merge)
+
+	for i, val := range nodesArray {
+		log.Info("print multi layers node info", "index", i, "root", val.root, "layers", val.layers,
+			"size", val.size)
+	}
 	return nodesArray
 }
 

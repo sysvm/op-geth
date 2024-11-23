@@ -354,6 +354,7 @@ func (db *Database) loadDiskLayer(r *rlp.Stream, journalTypeForReader JournalTyp
 			return nil, fmt.Errorf("failed to load disk nodes: %v", err)
 		}
 		nodes = make(map[common.Hash]map[string]*trienode.Node)
+		// todo: use flatten function
 		for _, entry := range encoded {
 			subset := make(map[string]*trienode.Node)
 			for _, n := range entry.Nodes {
