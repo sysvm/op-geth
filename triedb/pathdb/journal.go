@@ -347,6 +347,10 @@ func (db *Database) loadDiskLayer(r *rlp.Stream, journalTypeForReader JournalTyp
 		if err := journalBuf.Decode(&nodesArray); err != nil {
 			return nil, fmt.Errorf("11 failed to load disk nodes: %v", err)
 		}
+		for i, val := range nodesArray {
+			log.Info("print journal decode layers node info", "index", i, "root", val.root, "layers", val.layers,
+				"size", val.size)
+		}
 	} else {
 		// Resolve nodes cached in node buffer
 		var encoded []journalNodes
