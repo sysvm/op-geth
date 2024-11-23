@@ -115,6 +115,8 @@ func newNodeBufferList(
 
 	var base *multiDifflayer
 	if nodesArray != nil {
+		log.Info("new base for journal file", "root", nodesArray[0].root, "layers", nodesArray[0].layers,
+			"size", nodesArray[0].size)
 		base = newMultiDifflayer(limit, nodesArray[0].size, nodesArray[0].root, flattenTrieNodes(nodesArray[0].nodes), nodesArray[0].layers)
 	} else if nodes != nil {
 		var size uint64
@@ -577,9 +579,12 @@ func (nf *nodebufferlist) getMultiLayerNodes() []nblJournalData {
 		size:   nf.base.size,
 		nodes:  compressTrieNodes(nf.base.nodes),
 	})
+	log.Info("getMultiLayerNodes base", "state_id", nf.base.id, "root", nf.base.root, "layers", nf.base.layers,
+		"size", nf.base.size)
 
 	merge := func(buffer *multiDifflayer) bool {
-		log.Info("getMultiLayerNodes", "root", buffer.root, "layers", buffer.layers, "size", buffer.size)
+		log.Info("getMultiLayerNodes", "state_id", buffer.id, "root", buffer.root, "layers", buffer.layers,
+			"size", buffer.size)
 		nodesArray = append(nodesArray, nblJournalData{
 			root:   buffer.root,
 			layers: buffer.layers,

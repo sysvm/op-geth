@@ -343,6 +343,7 @@ func (db *Database) loadDiskLayer(r *rlp.Stream, journalTypeForReader JournalTyp
 	var nodesArray []nblJournalData
 
 	if db.config.TrieNodeBufferType == NodeBufferList && journalTypeForReader == JournalFileType && !db.fastRecovery {
+		log.Info("decode journal file data")
 		if err := journalBuf.Decode(&nodesArray); err != nil {
 			return nil, fmt.Errorf("11 failed to load disk nodes: %v", err)
 		}
