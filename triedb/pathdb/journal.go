@@ -386,7 +386,7 @@ func (db *Database) loadDiskLayer(r *rlp.Stream, journalTypeForReader JournalTyp
 		return nil, err
 	}
 
-	if db.config.TrieNodeBufferType == NodeBufferList && !db.useBase {
+	if db.config.TrieNodeBufferType == NodeBufferList && !db.useBase && db.fastRecovery {
 		recoveredRoot, recoveredStateID, _ := nb.getLatestStatus()
 		if recoveredRoot != root && recoveredStateID != id {
 			log.Error("Recovered state root and state id are different from recording ones",
