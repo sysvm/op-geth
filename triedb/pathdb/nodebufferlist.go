@@ -553,10 +553,13 @@ func (nf *nodebufferlist) getAllNodes() map[common.Hash]map[string]*trienode.Nod
 
 func (nf *nodebufferlist) recoverJournalData(nodesArray []nblJournalData) {
 	// skip index 0, it belongs to base buffer
-	for i := 1; i < len(nodesArray)-1; i++ {
+	length := len(nodesArray) - 1
+	for i := 1; i < length; i++ {
+		log.Info("recoverJournalData", "size", nodesArray[i].size, "root", nodesArray[i].root, "layers", nodesArray[i].layers)
 		mdl := newMultiDifflayer(nf.limit, nodesArray[i].size, nodesArray[i].root, nodesArray[i].nodes, nodesArray[i].layers)
 		nf.pushFront(mdl)
 	}
+	nf.count = uint64(length)
 	log.Info("recover journal data", "nf count", nf.count, "node array", len(nodesArray))
 }
 
