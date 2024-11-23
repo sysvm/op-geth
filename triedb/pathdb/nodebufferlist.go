@@ -115,7 +115,7 @@ func newNodeBufferList(
 
 	var base *multiDifflayer
 	if nodesArray != nil {
-		base = newMultiDifflayer(limit, nodesArray[0].size, nodesArray[0].root, nodesArray[0].nodes, nodesArray[0].layers)
+		base = newMultiDifflayer(limit, nodesArray[0].size, nodesArray[0].root, flattenTrieNodes(nodesArray[0].nodes), nodesArray[0].layers)
 	} else if nodes != nil {
 		var size uint64
 		for _, subset := range nodes {
@@ -553,10 +553,10 @@ func (nf *nodebufferlist) getAllNodes() map[common.Hash]map[string]*trienode.Nod
 
 func (nf *nodebufferlist) recoverJournalData(nodesArray []nblJournalData) {
 	// skip index 0, it belongs to base buffer
-	length := len(nodesArray) - 1
+	length := len(nodesArray)
 	for i := 1; i < length; i++ {
 		log.Info("recoverJournalData", "size", nodesArray[i].size, "root", nodesArray[i].root, "layers", nodesArray[i].layers)
-		mdl := newMultiDifflayer(nf.limit, nodesArray[i].size, nodesArray[i].root, nodesArray[i].nodes, nodesArray[i].layers)
+		mdl := newMultiDifflayer(nf.limit, nodesArray[i].size, nodesArray[i].root, flattenTrieNodes(nodesArray[i].nodes), nodesArray[i].layers)
 		nf.pushFront(mdl)
 	}
 	nf.count = uint64(length)
@@ -575,15 +575,16 @@ func (nf *nodebufferlist) getMultiLayerNodes() []nblJournalData {
 		root:   nf.base.root,
 		layers: nf.base.layers,
 		size:   nf.base.size,
-		nodes:  nf.base.nodes,
+		nodes:  compressTrieNodes(nf.base.nodes),
 	})
 
 	merge := func(buffer *multiDifflayer) bool {
+		log.Info("getMultiLayerNodes", "root", buffer.root, "layers", buffer.layers, "size", buffer.size)
 		nodesArray = append(nodesArray, nblJournalData{
 			root:   buffer.root,
 			layers: buffer.layers,
 			size:   buffer.size,
-			nodes:  buffer.nodes,
+			nodes:  compressTrieNodes(buffer.nodes),
 		})
 		return true
 	}

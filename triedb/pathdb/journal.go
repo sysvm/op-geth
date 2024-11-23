@@ -66,7 +66,7 @@ type nblJournalData struct {
 	root   common.Hash
 	layers uint64
 	size   uint64
-	nodes  map[common.Hash]map[string]*trienode.Node
+	nodes  []journalNodes
 }
 
 // journalAccounts represents a list accounts belong to the layer.
