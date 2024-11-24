@@ -520,14 +520,6 @@ func (dl *diskLayer) journal(w io.Writer, journalType JournalType) error {
 		if err := rlp.Encode(journalBuf, nodes); err != nil {
 			return err
 		}
-		var nodesArray []nblJournalData
-		if err := rlp.Decode(journalBuf, &nodesArray); err != nil {
-			return fmt.Errorf("37h28h8u failed to load disk nodes: %v", err)
-		}
-		for i, val := range nodesArray {
-			log.Info("print after decoding journal multi layers node info", "index", i, "root", val.root, "layers", val.layers,
-				"size", val.size)
-		}
 		log.Info("Journal file and node buffer list", "multi layer nodes count", len(nodes))
 	} else {
 		nodes := compressTrieNodes(dl.buffer.getAllNodes())
