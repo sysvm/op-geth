@@ -339,6 +339,8 @@ func (db *Database) loadDiskLayer(r *rlp.Stream, journalTypeForReader JournalTyp
 		return nil, fmt.Errorf("invalid state id: stored %d resolved %d", stored, id)
 	}
 
+	log.Info("load disk layer decode info", "stored id", stored, "root", root)
+
 	var nodes map[common.Hash]map[string]*trienode.Node
 	var nodesArray []nblJournalData
 
@@ -357,19 +359,7 @@ func (db *Database) loadDiskLayer(r *rlp.Stream, journalTypeForReader JournalTyp
 		if err := journalBuf.Decode(&encoded); err != nil {
 			return nil, fmt.Errorf("failed to load disk nodes: %v", err)
 		}
-		nodes = make(map[common.Hash]map[string]*trienode.Node)
-		// todo: use flatten function
-		for _, entry := range encoded {
-			subset := make(map[string]*trienode.Node)
-			for _, n := range entry.Nodes {
-				if len(n.Blob) > 0 {
-					subset[string(n.Path)] = trienode.New(crypto.Keccak256Hash(n.Blob), n.Blob)
-				} else {
-					subset[string(n.Path)] = trienode.NewDeleted()
-				}
-			}
-			nodes[entry.Owner] = subset
-		}
+		nodes = flattenTrieNodes(encoded)
 	}
 
 	if journalTypeForReader == JournalFileType {
@@ -531,15 +521,7 @@ func (dl *diskLayer) journal(w io.Writer, journalType JournalType) error {
 		}
 		log.Info("Journal file and node buffer list", "multi layer nodes count", len(nodes))
 	} else {
-		bufferNodes := dl.buffer.getAllNodes()
-		nodes := make([]journalNodes, 0, len(bufferNodes))
-		for owner, subset := range bufferNodes {
-			entry := journalNodes{Owner: owner}
-			for path, node := range subset {
-				entry.Nodes = append(entry.Nodes, journalNode{Path: []byte(path), Blob: node.Blob})
-			}
-			nodes = append(nodes, entry)
-		}
+		nodes := compressTrieNodes(dl.buffer.getAllNodes())
 		if err := rlp.Encode(journalBuf, nodes); err != nil {
 			return err
 		}

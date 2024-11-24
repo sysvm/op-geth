@@ -561,7 +561,7 @@ func (nf *nodebufferlist) recoverJournalData(nodesArray []nblJournalData) {
 		mdl := newMultiDifflayer(nf.limit, nodesArray[i].size, nodesArray[i].root, flattenTrieNodes(nodesArray[i].nodes), nodesArray[i].layers)
 		nf.pushFront(mdl)
 	}
-	nf.count = uint64(length)
+	nf.count = uint64(length) - 1
 	log.Info("recover journal data", "nf count", nf.count, "node array", len(nodesArray))
 }
 
