@@ -66,7 +66,7 @@ type nblJournalData struct {
 	root   common.Hash
 	layers uint64
 	size   uint64
-	nodes  []journalNodes
+	// nodes  []journalNodes
 }
 
 // journalAccounts represents a list accounts belong to the layer.
@@ -346,11 +346,10 @@ func (db *Database) loadDiskLayer(r *rlp.Stream, journalTypeForReader JournalTyp
 
 	if db.config.TrieNodeBufferType == NodeBufferList && journalTypeForReader == JournalFileType && !db.fastRecovery {
 		log.Info("decode journal file data")
-		var nnn []nblJournalData
-		if err := journalBuf.Decode(&nnn); err != nil {
+		if err := journalBuf.Decode(&nodesArray); err != nil {
 			return nil, fmt.Errorf("11 failed to load disk nodes: %v", err)
 		}
-		for i, val := range nnn {
+		for i, val := range nodesArray {
 			log.Info("print load decode layers node info", "index", i, "root", val.root, "layers", val.layers,
 				"size", val.size)
 		}

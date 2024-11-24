@@ -117,7 +117,7 @@ func newNodeBufferList(
 	if nodesArray != nil {
 		log.Info("new base for journal file", "root", nodesArray[0].root, "layers", nodesArray[0].layers,
 			"size", nodesArray[0].size)
-		base = newMultiDifflayer(limit, nodesArray[0].size, nodesArray[0].root, flattenTrieNodes(nodesArray[0].nodes), nodesArray[0].layers)
+		base = newMultiDifflayer(limit, nodesArray[0].size, nodesArray[0].root, nil, nodesArray[0].layers)
 	} else if nodes != nil {
 		var size uint64
 		for _, subset := range nodes {
@@ -558,7 +558,7 @@ func (nf *nodebufferlist) recoverJournalData(nodesArray []nblJournalData) {
 	length := len(nodesArray)
 	for i := 1; i < length; i++ {
 		log.Info("recoverJournalData", "size", nodesArray[i].size, "root", nodesArray[i].root, "layers", nodesArray[i].layers)
-		mdl := newMultiDifflayer(nf.limit, nodesArray[i].size, nodesArray[i].root, flattenTrieNodes(nodesArray[i].nodes), nodesArray[i].layers)
+		mdl := newMultiDifflayer(nf.limit, nodesArray[i].size, nodesArray[i].root, nil, nodesArray[i].layers)
 		nf.pushFront(mdl)
 	}
 	nf.count = uint64(length) - 1
@@ -577,7 +577,7 @@ func (nf *nodebufferlist) getMultiLayerNodes() []nblJournalData {
 		root:   nf.base.root,
 		layers: nf.base.layers,
 		size:   nf.base.size,
-		nodes:  compressTrieNodes(nf.base.nodes),
+		// nodes:  compressTrieNodes(nf.base.nodes),
 	})
 	log.Info("getMultiLayerNodes base", "state_id", nf.base.id, "root", nf.base.root, "layers", nf.base.layers,
 		"size", nf.base.size)
@@ -589,7 +589,7 @@ func (nf *nodebufferlist) getMultiLayerNodes() []nblJournalData {
 			root:   buffer.root,
 			layers: buffer.layers,
 			size:   buffer.size,
-			nodes:  compressTrieNodes(buffer.nodes),
+			// nodes:  compressTrieNodes(buffer.nodes),
 		})
 		return true
 	}
