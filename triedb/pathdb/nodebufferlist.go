@@ -572,7 +572,8 @@ func (nf *nodebufferlist) getMultiLayerNodes() []nblJournalData {
 	defer nf.mux.Unlock()
 	defer nf.baseMux.Unlock()
 
-	nodesArray := make([]nblJournalData, 0, nf.count+1)
+	var nodesArray []nblJournalData
+	// nodesArray := make([]nblJournalData, 0, nf.count+1)
 	nodesArray = append(nodesArray, nblJournalData{
 		root:   nf.base.root,
 		layers: nf.base.layers,
@@ -582,18 +583,18 @@ func (nf *nodebufferlist) getMultiLayerNodes() []nblJournalData {
 	log.Info("getMultiLayerNodes base", "state_id", nf.base.id, "root", nf.base.root, "layers", nf.base.layers,
 		"size", nf.base.size)
 
-	// merge := func(buffer *multiDifflayer) bool {
-	// 	log.Info("getMultiLayerNodes", "state_id", buffer.id, "root", buffer.root, "layers", buffer.layers,
-	// 		"size", buffer.size)
-	// 	nodesArray = append(nodesArray, nblJournalData{
-	// 		root:   buffer.root,
-	// 		layers: buffer.layers,
-	// 		size:   buffer.size,
-	// 		nodes:  compressTrieNodes(buffer.nodes),
-	// 	})
-	// 	return true
-	// }
-	// nf.traverseReverse(merge)
+	merge := func(buffer *multiDifflayer) bool {
+		log.Info("getMultiLayerNodes", "state_id", buffer.id, "root", buffer.root, "layers", buffer.layers,
+			"size", buffer.size)
+		nodesArray = append(nodesArray, nblJournalData{
+			root:   buffer.root,
+			layers: buffer.layers,
+			size:   buffer.size,
+			nodes:  compressTrieNodes(buffer.nodes),
+		})
+		return true
+	}
+	nf.traverseReverse(merge)
 
 	for i, val := range nodesArray {
 		log.Info("print multi layers node info", "index", i, "root", val.root, "layers", val.layers,

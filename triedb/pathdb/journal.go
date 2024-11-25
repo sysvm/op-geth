@@ -518,24 +518,24 @@ func (dl *diskLayer) journal(w io.Writer, journalType JournalType) error {
 			log.Info("print journal multi layers node info", "index", i, "root", val.root, "layers", val.layers,
 				"size", val.size)
 		}
-		nodeCopy := make([]nblJournalData, 0, len(nodes))
-		for i, val := range nodes {
-			nodeCopy[i] = val
-			log.Info("print nodeCopy111 multi layers node info", "index", i, "root", val.root, "layers", val.layers,
-				"size", val.size)
-			a := nodes[i]
-			log.Info("cfnwen", "a", a.size)
-		}
+		// nodeCopy := make([]nblJournalData, 0, len(nodes))
+		// for i, val := range nodes {
+		// 	nodeCopy[i] = val
+		// 	log.Info("print nodeCopy111 multi layers node info", "index", i, "root", val.root, "layers", val.layers,
+		// 		"size", val.size)
+		// 	a := nodes[i]
+		// 	log.Info("cfnwen", "a", a.size)
+		// }
 		// var nodeCopy []nblJournalData
 		// copy(nodeCopy, nodes)
-		log.Info("jnwvrjnrn")
-		for i, val := range nodeCopy {
-			log.Info("print nodeCopy multi layers node info", "index", i, "root", val.root, "layers", val.layers,
-				"size", val.size)
-		}
+		// log.Info("jnwvrjnrn")
+		// for i, val := range nodeCopy {
+		// 	log.Info("print nodeCopy multi layers node info", "index", i, "root", val.root, "layers", val.layers,
+		// 		"size", val.size)
+		// }
 		// layerNum := dl.buffer.getLayers()
 		// log.Info("print journal layers", "layer", layerNum)
-		if err := rlp.Encode(journalBuf, nodeCopy); err != nil {
+		if err := rlp.Encode(journalBuf, nodes); err != nil {
 			return err
 		}
 		log.Info("Journal file and node buffer list", "multi layer nodes count", len(nodes))
