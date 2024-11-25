@@ -518,8 +518,14 @@ func (dl *diskLayer) journal(w io.Writer, journalType JournalType) error {
 			log.Info("print journal multi layers node info", "index", i, "root", val.root, "layers", val.layers,
 				"size", val.size)
 		}
-		var nodeCopy []nblJournalData
-		copy(nodeCopy, nodes)
+		nodeCopy := make([]nblJournalData, 0, len(nodes))
+		for i, val := range nodes {
+			nodeCopy[i] = nodes[i]
+			log.Info("print nodeCopy111 multi layers node info", "index", i, "root", val.root, "layers", val.layers,
+				"size", val.size)
+		}
+		// var nodeCopy []nblJournalData
+		// copy(nodeCopy, nodes)
 		log.Info("jnwvrjnrn")
 		for i, val := range nodeCopy {
 			log.Info("print nodeCopy multi layers node info", "index", i, "root", val.root, "layers", val.layers,
