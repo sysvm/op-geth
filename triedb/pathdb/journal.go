@@ -485,7 +485,8 @@ func (dl *diskLayer) journal(w io.Writer, journalType JournalType) error {
 		return err
 	}
 	// Step three, write all unwritten nodes into the journal
-	nodes := compressTrieNodes(dl.buffer.getAllNodes())
+	bufferNodes := dl.buffer.getAllNodes()
+	nodes := compressTrieNodes(bufferNodes)
 	if err := rlp.Encode(journalBuf, nodes); err != nil {
 		return err
 	}
@@ -505,7 +506,7 @@ func (dl *diskLayer) journal(w io.Writer, journalType JournalType) error {
 		}
 	}
 
-	log.Info("Journaled pathdb disk layer", "root", dl.root)
+	log.Info("Journaled pathdb disk layer", "root", dl.root, "nodes", len(bufferNodes))
 	return nil
 }
 

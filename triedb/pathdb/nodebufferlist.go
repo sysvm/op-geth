@@ -108,12 +108,8 @@ func newNodeBufferList(
 		dlInMd = wpBlocks
 	}
 
-	if nodes == nil {
-		nodes = make(map[common.Hash]map[string]*trienode.Node)
-	}
-
 	var base *multiDifflayer
-	if nodes != nil {
+	if nodes != nil && !fastRecovery {
 		var size uint64
 		for _, subset := range nodes {
 			for path, n := range subset {
@@ -229,7 +225,7 @@ func (nf *nodebufferlist) recoverNodeBufferList(freezer *rawdb.ResettableFreezer
 	}
 	nf.diffToBase()
 
-	log.Info("Succeed to add diff layer", "base_size", nf.base.size, "tail_state_id", nf.tail.id,
+	log.Info("Succeed to recover node buffer list", "base_size", nf.base.size, "tail_state_id", nf.tail.id,
 		"head_state_id", nf.head.id, "nbl_layers", nf.layers, "base_layers", nf.base.layers)
 	return nil
 }
