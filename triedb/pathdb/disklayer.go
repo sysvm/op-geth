@@ -86,7 +86,8 @@ type trienodebuffer interface {
 	// getLatestStatus returns latest status for disk layer
 	getLatestStatus() (common.Hash, uint64, error)
 
-	getMultiLayerNodes() []nblJournalData
+	// getMultiLayerNodes() []nblJournalData
+	getMultiLayerNodes() map[common.Hash]map[string]*trienode.Node
 }
 
 type NodeBufferType int32

@@ -566,22 +566,34 @@ func (nf *nodebufferlist) recoverJournalData(nodesArray []nblJournalData) {
 }
 
 // getMultiLayerNodes return all the trie nodes are cached in trienodebuffer.
-func (nf *nodebufferlist) getMultiLayerNodes() []nblJournalData {
+func (nf *nodebufferlist) getMultiLayerNodes() map[common.Hash]map[string]*trienode.Node {
 	nf.mux.Lock()
 	nf.baseMux.Lock()
 	defer nf.mux.Unlock()
 	defer nf.baseMux.Unlock()
 
-	var nodesArray []nblJournalData
-	// nodesArray := make([]nblJournalData, 0, nf.count+1)
-	nodesArray = append(nodesArray, nblJournalData{
-		root:   nf.base.root,
-		layers: nf.base.layers,
-		size:   nf.base.size,
-		nodes:  compressTrieNodes(nf.base.nodes),
-	})
-	log.Info("getMultiLayerNodes base", "state_id", nf.base.id, "root", nf.base.root, "layers", nf.base.layers,
-		"size", nf.base.size)
+	nc := newMultiDifflayer(nf.limit, 0, common.Hash{}, make(map[common.Hash]map[string]*trienode.Node), 0)
+	if err := nc.commit(nf.base.root, nf.base.id, nf.base.block, nf.layers, nf.base.nodes); err != nil {
+		log.Crit("failed to commit nodes to node buffer", "error", err)
+	}
+	merge := func(buffer *multiDifflayer) bool {
+		if err := nc.commit(buffer.root, buffer.id, buffer.block, buffer.layers, buffer.nodes); err != nil {
+			log.Crit("failed to commit nodes to node buffer", "error", err)
+		}
+		return true
+	}
+	nf.traverseReverse(merge)
+	return nc.nodes
+
+	// var nodesArray []nblJournalData
+	// nodesArray = append(nodesArray, nblJournalData{
+	// 	root:   nf.base.root,
+	// 	layers: nf.base.layers,
+	// 	size:   nf.base.size,
+	// 	nodes:  compressTrieNodes(nf.base.nodes),
+	// })
+	// log.Info("getMultiLayerNodes base", "state_id", nf.base.id, "root", nf.base.root, "layers", nf.base.layers,
+	// 	"size", nf.base.size)
 
 	// merge := func(buffer *multiDifflayer) bool {
 	// 	log.Info("getMultiLayerNodes", "state_id", buffer.id, "root", buffer.root, "layers", buffer.layers,
@@ -596,11 +608,11 @@ func (nf *nodebufferlist) getMultiLayerNodes() []nblJournalData {
 	// }
 	// nf.traverseReverse(merge)
 
-	for i, val := range nodesArray {
-		log.Info("print multi layers node info", "index", i, "root", val.root, "layers", val.layers,
-			"size", val.size)
-	}
-	return nodesArray
+	// for i, val := range nodesArray {
+	// 	log.Info("print multi layers node info", "index", i, "root", val.root, "layers", val.layers,
+	// 		"size", val.size)
+	// }
+	// return nodesArray
 }
 
 // getLayers return the size of cached difflayers.
