@@ -346,15 +346,15 @@ func (db *Database) loadDiskLayer(r *rlp.Stream, journalTypeForReader JournalTyp
 
 	if db.config.TrieNodeBufferType == NodeBufferList && journalTypeForReader == JournalFileType && !db.fastRecovery {
 		log.Info("decode journal file data")
-		var layerNum uint64
-		if err := journalBuf.Decode(&layerNum); err != nil {
+		// var layerNum uint64
+		if err := journalBuf.Decode(&nodesArray); err != nil {
 			return nil, fmt.Errorf("11 failed to load disk nodes: %v", err)
 		}
-		log.Info("print load layers", "layer", layerNum)
-		// for i, val := range nodesArray {
-		// 	log.Info("print load decode layers node info", "index", i, "root", val.root, "layers", val.layers,
-		// 		"size", val.size)
-		// }
+		// log.Info("print load layers", "layer", layerNum)
+		for i, val := range nodesArray {
+			log.Info("print load decode layers node info", "index", i, "root", val.root, "layers", val.layers,
+				"size", val.size)
+		}
 	} else {
 		// Resolve nodes cached in node buffer
 		var encoded []journalNodes
