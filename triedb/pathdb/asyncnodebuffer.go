@@ -217,10 +217,6 @@ func (a *asyncnodebuffer) getLatestStatus() (common.Hash, uint64, error) {
 	return common.Hash{}, 0, errors.New("unsupported method for async node buffer")
 }
 
-func (a *asyncnodebuffer) getMultiLayerNodes() map[common.Hash]map[string]*trienode.Node {
-	return nil
-}
-
 type nodecache struct {
 	layers    uint64                                    // The number of diff layers aggregated inside
 	size      uint64                                    // The size of aggregated writes

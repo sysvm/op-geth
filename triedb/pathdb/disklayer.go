@@ -85,9 +85,6 @@ type trienodebuffer interface {
 
 	// getLatestStatus returns latest status for disk layer
 	getLatestStatus() (common.Hash, uint64, error)
-
-	// getMultiLayerNodes() []nblJournalData
-	getMultiLayerNodes() map[common.Hash]map[string]*trienode.Node
 }
 
 type NodeBufferType int32
@@ -125,7 +122,6 @@ func NewTrieNodeBuffer(
 	trieNodeBufferType NodeBufferType,
 	limit int,
 	nodes map[common.Hash]map[string]*trienode.Node,
-	nodesArray []nblJournalData,
 	layers, proposeBlockInterval uint64,
 	keepFunc NotifyKeepFunc,
 	freezer *rawdb.ResettableFreezer,
@@ -134,13 +130,13 @@ func NewTrieNodeBuffer(
 	log.Info("init trie node buffer", "type", nodeBufferTypeToString[trieNodeBufferType])
 	switch trieNodeBufferType {
 	case NodeBufferList:
-		return newNodeBufferList(db, uint64(limit), nodes, nodesArray, layers, proposeBlockInterval, keepFunc, freezer, fastRecovery, useBase)
+		return newNodeBufferList(db, uint64(limit), nodes, layers, proposeBlockInterval, keepFunc, freezer, fastRecovery, useBase)
 	case AsyncNodeBuffer:
 		return newAsyncNodeBuffer(limit, nodes, layers)
 	case SyncNodeBuffer:
 		return newNodeBuffer(limit, nodes, layers)
 	default:
-		return newNodeBufferList(db, uint64(limit), nodes, nodesArray, layers, proposeBlockInterval, keepFunc, freezer, fastRecovery, useBase)
+		return newNodeBufferList(db, uint64(limit), nodes, layers, proposeBlockInterval, keepFunc, freezer, fastRecovery, useBase)
 	}
 }
 

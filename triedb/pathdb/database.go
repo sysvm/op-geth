@@ -367,7 +367,7 @@ func (db *Database) Enable(root common.Hash) error {
 	}
 	// Re-construct a new disk layer backed by persistent state
 	// with **empty clean cache and node buffer**.
-	nb, err := NewTrieNodeBuffer(db.diskdb, db.config.TrieNodeBufferType, db.bufferSize, nil, nil, 0, db.config.ProposeBlockInterval,
+	nb, err := NewTrieNodeBuffer(db.diskdb, db.config.TrieNodeBufferType, db.bufferSize, nil, 0, db.config.ProposeBlockInterval,
 		db.config.NotifyKeep, db.freezer, false, false)
 	if err != nil {
 		log.Error("Failed to new trie node buffer", "error", err)

@@ -84,7 +84,6 @@ func newNodeBufferList(
 	db ethdb.Database,
 	limit uint64,
 	nodes map[common.Hash]map[string]*trienode.Node,
-	nodesArray []nblJournalData,
 	layers uint64,
 	proposeBlockInterval uint64,
 	keepFunc NotifyKeepFunc,
@@ -114,11 +113,7 @@ func newNodeBufferList(
 	}
 
 	var base *multiDifflayer
-	if nodesArray != nil {
-		log.Info("new base for journal file", "root", nodesArray[0].root, "layers", nodesArray[0].layers,
-			"size", nodesArray[0].size)
-		base = newMultiDifflayer(limit, nodesArray[0].size, nodesArray[0].root, nil, nodesArray[0].layers)
-	} else if nodes != nil {
+	if nodes != nil {
 		var size uint64
 		for _, subset := range nodes {
 			for path, n := range subset {
@@ -145,9 +140,7 @@ func newNodeBufferList(
 		keepFunc:        keepFunc,
 	}
 
-	if nodesArray != nil {
-		nf.recoverJournalData(nodesArray)
-	} else if !useBase && fastRecovery {
+	if !useBase && fastRecovery {
 		if freezer == nil {
 			log.Crit("Use unopened freezer db to recover node buffer list")
 		}
@@ -551,68 +544,6 @@ func (nf *nodebufferlist) getAllNodes() map[common.Hash]map[string]*trienode.Nod
 	}
 	nf.traverseReverse(merge)
 	return nc.nodes
-}
-
-func (nf *nodebufferlist) recoverJournalData(nodesArray []nblJournalData) {
-	// skip index 0, it belongs to base buffer
-	length := len(nodesArray)
-	for i := 1; i < length; i++ {
-		log.Info("recoverJournalData", "size", nodesArray[i].size, "root", nodesArray[i].root, "layers", nodesArray[i].layers)
-		mdl := newMultiDifflayer(nf.limit, nodesArray[i].size, nodesArray[i].root, nil, nodesArray[i].layers)
-		nf.pushFront(mdl)
-	}
-	nf.count = uint64(length) - 1
-	log.Info("recover journal data", "nf count", nf.count, "node array", len(nodesArray))
-}
-
-// getMultiLayerNodes return all the trie nodes are cached in trienodebuffer.
-func (nf *nodebufferlist) getMultiLayerNodes() map[common.Hash]map[string]*trienode.Node {
-	nf.mux.Lock()
-	nf.baseMux.Lock()
-	defer nf.mux.Unlock()
-	defer nf.baseMux.Unlock()
-
-	nc := newMultiDifflayer(nf.limit, 0, common.Hash{}, make(map[common.Hash]map[string]*trienode.Node), 0)
-	if err := nc.commit(nf.base.root, nf.base.id, nf.base.block, nf.layers, nf.base.nodes); err != nil {
-		log.Crit("failed to commit nodes to node buffer", "error", err)
-	}
-	merge := func(buffer *multiDifflayer) bool {
-		if err := nc.commit(buffer.root, buffer.id, buffer.block, buffer.layers, buffer.nodes); err != nil {
-			log.Crit("failed to commit nodes to node buffer", "error", err)
-		}
-		return true
-	}
-	nf.traverseReverse(merge)
-	return nc.nodes
-
-	// var nodesArray []nblJournalData
-	// nodesArray = append(nodesArray, nblJournalData{
-	// 	root:   nf.base.root,
-	// 	layers: nf.base.layers,
-	// 	size:   nf.base.size,
-	// 	nodes:  compressTrieNodes(nf.base.nodes),
-	// })
-	// log.Info("getMultiLayerNodes base", "state_id", nf.base.id, "root", nf.base.root, "layers", nf.base.layers,
-	// 	"size", nf.base.size)
-
-	// merge := func(buffer *multiDifflayer) bool {
-	// 	log.Info("getMultiLayerNodes", "state_id", buffer.id, "root", buffer.root, "layers", buffer.layers,
-	// 		"size", buffer.size)
-	// 	nodesArray = append(nodesArray, nblJournalData{
-	// 		root:   buffer.root,
-	// 		layers: buffer.layers,
-	// 		size:   buffer.size,
-	// 		nodes:  compressTrieNodes(buffer.nodes),
-	// 	})
-	// 	return true
-	// }
-	// nf.traverseReverse(merge)
-
-	// for i, val := range nodesArray {
-	// 	log.Info("print multi layers node info", "index", i, "root", val.root, "layers", val.layers,
-	// 		"size", val.size)
-	// }
-	// return nodesArray
 }
 
 // getLayers return the size of cached difflayers.

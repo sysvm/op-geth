@@ -61,14 +61,6 @@ type journalNodes struct {
 	Nodes []journalNode
 }
 
-// nblJournalData is used for journal nodebufferlist data in journa file.
-type nblJournalData struct {
-	root   common.Hash
-	layers uint64
-	size   uint64
-	nodes  []journalNodes
-}
-
 // journalAccounts represents a list accounts belong to the layer.
 type journalAccounts struct {
 	Addresses []common.Address
@@ -281,7 +273,7 @@ func (db *Database) loadLayers() layer {
 		start := time.Now()
 		log.Info("Recover node buffer list from ancient db")
 
-		nb, err = NewTrieNodeBuffer(db.diskdb, db.config.TrieNodeBufferType, db.bufferSize, nil, nil, 0,
+		nb, err = NewTrieNodeBuffer(db.diskdb, db.config.TrieNodeBufferType, db.bufferSize, nil, 0,
 			db.config.ProposeBlockInterval, db.config.NotifyKeep, db.freezer, db.fastRecovery, db.useBase)
 		if err != nil {
 			log.Error("Failed to new trie node buffer for recovery", "error", err)
@@ -293,7 +285,7 @@ func (db *Database) loadLayers() layer {
 	}
 	if nb == nil || err != nil {
 		// Return single layer with persistent state.
-		nb, err = NewTrieNodeBuffer(db.diskdb, db.config.TrieNodeBufferType, db.bufferSize, nil, nil, 0,
+		nb, err = NewTrieNodeBuffer(db.diskdb, db.config.TrieNodeBufferType, db.bufferSize, nil, 0,
 			db.config.ProposeBlockInterval, db.config.NotifyKeep, nil, false, db.useBase)
 		if err != nil {
 			log.Crit("Failed to new trie node buffer", "error", err)
@@ -339,31 +331,12 @@ func (db *Database) loadDiskLayer(r *rlp.Stream, journalTypeForReader JournalTyp
 		return nil, fmt.Errorf("invalid state id: stored %d resolved %d", stored, id)
 	}
 
-	log.Info("load disk layer decode info", "stored id", stored, "root", root)
-
-	var nodes map[common.Hash]map[string]*trienode.Node
-	var nodesArray []nblJournalData
-
-	if db.config.TrieNodeBufferType == NodeBufferList && journalTypeForReader == JournalFileType && !db.fastRecovery {
-		log.Info("decode journal file data")
-		var encoded []journalNodes
-		if err := journalBuf.Decode(&encoded); err != nil {
-			return nil, fmt.Errorf("11 failed to load disk nodes: %v", err)
-		}
-		nodes = flattenTrieNodes(encoded)
-		// log.Info("print load layers", "layer", layerNum)
-		// for i, val := range nodesArray {
-		// 	log.Info("print load decode layers node info", "index", i, "root", val.root, "layers", val.layers,
-		// 		"size", val.size)
-		// }
-	} else {
-		// Resolve nodes cached in node buffer
-		var encoded []journalNodes
-		if err := journalBuf.Decode(&encoded); err != nil {
-			return nil, fmt.Errorf("failed to load disk nodes: %v", err)
-		}
-		nodes = flattenTrieNodes(encoded)
+	// Resolve nodes cached in node buffer
+	var encoded []journalNodes
+	if err := journalBuf.Decode(&encoded); err != nil {
+		return nil, fmt.Errorf("failed to load disk nodes: %v", err)
 	}
+	nodes := flattenTrieNodes(encoded)
 
 	if journalTypeForReader == JournalFileType {
 		var shaSum [32]byte
@@ -378,7 +351,7 @@ func (db *Database) loadDiskLayer(r *rlp.Stream, journalTypeForReader JournalTyp
 	}
 
 	// Calculate the internal state transitions by id difference.
-	nb, err := NewTrieNodeBuffer(db.diskdb, db.config.TrieNodeBufferType, db.bufferSize, nodes, nodesArray, id-stored, db.config.ProposeBlockInterval,
+	nb, err := NewTrieNodeBuffer(db.diskdb, db.config.TrieNodeBufferType, db.bufferSize, nodes, id-stored, db.config.ProposeBlockInterval,
 		db.config.NotifyKeep, db.freezer, db.fastRecovery, db.useBase)
 	if err != nil {
 		log.Error("Failed to new trie node buffer", "error", err)
@@ -511,41 +484,10 @@ func (dl *diskLayer) journal(w io.Writer, journalType JournalType) error {
 	if err := rlp.Encode(journalBuf, dl.id); err != nil {
 		return err
 	}
-
 	// Step three, write all unwritten nodes into the journal
-	if _, ok := dl.buffer.(*nodebufferlist); ok && journalType == JournalFileType && !dl.db.fastRecovery {
-		nodes := compressTrieNodes(dl.buffer.getMultiLayerNodes())
-		// for i, val := range nodes {
-		// 	log.Info("print journal multi layers node info", "index", i, "root", val.root, "layers", val.layers,
-		// 		"size", val.size)
-		// }
-		// nodeCopy := make([]nblJournalData, 0, len(nodes))
-		// for i, val := range nodes {
-		// 	nodeCopy[i] = val
-		// 	log.Info("print nodeCopy111 multi layers node info", "index", i, "root", val.root, "layers", val.layers,
-		// 		"size", val.size)
-		// 	a := nodes[i]
-		// 	log.Info("cfnwen", "a", a.size)
-		// }
-		// var nodeCopy []nblJournalData
-		// copy(nodeCopy, nodes)
-		// log.Info("jnwvrjnrn")
-		// for i, val := range nodeCopy {
-		// 	log.Info("print nodeCopy multi layers node info", "index", i, "root", val.root, "layers", val.layers,
-		// 		"size", val.size)
-		// }
-		// layerNum := dl.buffer.getLayers()
-		// log.Info("print journal layers", "layer", layerNum)
-		if err := rlp.Encode(journalBuf, nodes); err != nil {
-			return err
-		}
-		log.Info("Journal file and node buffer list", "multi layer nodes count", len(nodes))
-	} else {
-		nodes := compressTrieNodes(dl.buffer.getAllNodes())
-		if err := rlp.Encode(journalBuf, nodes); err != nil {
-			return err
-		}
-		log.Info("get all nodes", "nodes count", len(nodes))
+	nodes := compressTrieNodes(dl.buffer.getAllNodes())
+	if err := rlp.Encode(journalBuf, nodes); err != nil {
+		return err
 	}
 
 	// Store the journal buf into w and calculate checksum
