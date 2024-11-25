@@ -577,7 +577,7 @@ func (nf *nodebufferlist) getMultiLayerNodes() []nblJournalData {
 		root:   nf.base.root,
 		layers: nf.base.layers,
 		size:   nf.base.size,
-		// nodes:  compressTrieNodes(nf.base.nodes),
+		nodes:  compressTrieNodes(nf.base.nodes),
 	})
 	log.Info("getMultiLayerNodes base", "state_id", nf.base.id, "root", nf.base.root, "layers", nf.base.layers,
 		"size", nf.base.size)
@@ -589,7 +589,7 @@ func (nf *nodebufferlist) getMultiLayerNodes() []nblJournalData {
 			root:   buffer.root,
 			layers: buffer.layers,
 			size:   buffer.size,
-			// nodes:  compressTrieNodes(buffer.nodes),
+			nodes:  compressTrieNodes(buffer.nodes),
 		})
 		return true
 	}

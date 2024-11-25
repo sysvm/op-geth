@@ -66,7 +66,7 @@ type nblJournalData struct {
 	root   common.Hash
 	layers uint64
 	size   uint64
-	// nodes  []journalNodes
+	nodes  []journalNodes
 }
 
 // journalAccounts represents a list accounts belong to the layer.
@@ -518,9 +518,15 @@ func (dl *diskLayer) journal(w io.Writer, journalType JournalType) error {
 			log.Info("print journal multi layers node info", "index", i, "root", val.root, "layers", val.layers,
 				"size", val.size)
 		}
-		layerNum := dl.buffer.getLayers()
-		log.Info("print journal layers", "layer", layerNum)
-		if err := rlp.Encode(journalBuf, layerNum); err != nil {
+		var nodeCopy []nblJournalData
+		copy(nodeCopy, nodes)
+		for i, val := range nodeCopy {
+			log.Info("print nodeCopy multi layers node info", "index", i, "root", val.root, "layers", val.layers,
+				"size", val.size)
+		}
+		// layerNum := dl.buffer.getLayers()
+		// log.Info("print journal layers", "layer", layerNum)
+		if err := rlp.Encode(journalBuf, nodeCopy); err != nil {
 			return err
 		}
 		log.Info("Journal file and node buffer list", "multi layer nodes count", len(nodes))
