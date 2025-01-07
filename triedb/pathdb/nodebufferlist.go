@@ -226,7 +226,8 @@ func (nf *nodebufferlist) recoverNodeBufferList(freezer *rawdb.ResettableFreezer
 	log.Info("Measure data", "nf.size", nf.size, "nf.layers", nf.layers, "nf.count", nf.count,
 		"rsevMdNum", nf.rsevMdNum)
 
-	nf.diffToBase()
+	// nf.diffToBase()
+	nf.diffToBaseNoCheckCount()
 	log.Info("After diffToBase", "base_size", nf.base.size, "base_layers", nf.base.layers,
 		"nbl_layers", nf.layers)
 	nf.backgroundFlush()
@@ -676,6 +677,59 @@ func (nf *nodebufferlist) traverseReverse(cb func(*multiDifflayer) bool) {
 		cursor = pre
 	}
 	return
+}
+
+func (nf *nodebufferlist) diffToBaseNoCheckCount() {
+	commitFunc := func(buffer *multiDifflayer) bool {
+		log.Info("diffToBase function", "nf.base.size", nf.base.size, "nf.count", nf.count,
+			"buffer.block%nf.dlInMd", buffer.block%nf.dlInMd, "nf.base.limit", nf.base.limit, "nf.rsevMdNum", nf.rsevMdNum)
+
+		if nf.base.size >= nf.base.limit {
+			log.Debug("base node buffer need write disk immediately")
+			return false
+		}
+		if buffer.block%nf.dlInMd != 0 {
+			log.Crit("committed block number misaligned", "block", buffer.block)
+		}
+
+		if nf.keepFunc != nil { // keep in background flush stage
+			nf.keepFunc(&KeepRecord{
+				BlockID:      buffer.block,
+				StateRoot:    buffer.root,
+				KeepInterval: nf.wpBlocks,
+				PinnedInnerTrieReader: &proposedBlockReader{
+					nf:   nf,
+					diff: buffer,
+				}})
+		}
+
+		nf.baseMux.Lock()
+		err := nf.base.commit(buffer.root, buffer.id, buffer.block, buffer.layers, buffer.nodes)
+		nf.baseMux.Unlock()
+		if err != nil {
+			log.Error("failed to commit nodes to base node buffer", "error", err)
+			return false
+		}
+
+		nf.mux.Lock()
+		_ = nf.popBack()
+		nodeBufferListSizeGauge.Update(int64(nf.size))
+		nodeBufferListCountGauge.Update(int64(nf.count))
+		nodeBufferListLayerGauge.Update(int64(nf.layers))
+		if nf.layers > 0 {
+			nodeBufferListDifflayerAvgSize.Update(int64(nf.size / nf.layers))
+		}
+		nf.mux.Unlock()
+		baseNodeBufferSizeGauge.Update(int64(nf.base.size))
+		baseNodeBufferLayerGauge.Update(int64(nf.base.layers))
+		if nf.base.layers > 0 {
+			baseNodeBufferDifflayerAvgSize.Update(int64(nf.base.size / nf.base.layers))
+		}
+		nf.report()
+
+		return true
+	}
+	nf.traverseReverse(commitFunc)
 }
 
 // diffToBase calls traverseReverse and merges the multiDifflayer's nodes to
