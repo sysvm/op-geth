@@ -223,7 +223,12 @@ func (nf *nodebufferlist) recoverNodeBufferList(freezer *rawdb.ResettableFreezer
 		nf.size += current.size
 		nf.layers += current.layers
 	}
+	log.Info("Measure data", "nf.size", nf.size, "nf.layers", nf.layers, "nf.count", nf.count,
+		"rsevMdNum", nf.rsevMdNum)
+
 	nf.diffToBase()
+	log.Info("After diffToBase", "base_size", nf.base.size, "base_layers", nf.base.layers,
+		"nbl_layers", nf.layers)
 	nf.backgroundFlush()
 
 	log.Info("Succeed to recover node buffer list", "base_size", nf.base.size, "tail_state_id", nf.tail.id,
@@ -678,6 +683,9 @@ func (nf *nodebufferlist) traverseReverse(cb func(*multiDifflayer) bool) {
 // periodically in the background
 func (nf *nodebufferlist) diffToBase() {
 	commitFunc := func(buffer *multiDifflayer) bool {
+		log.Info("diffToBase function", "nf.base.size", nf.base.size, "nf.count", nf.count,
+			"buffer.block%nf.dlInMd", buffer.block%nf.dlInMd, "nf.base.limit", nf.base.limit, "nf.rsevMdNum", nf.rsevMdNum)
+
 		if nf.base.size >= nf.base.limit {
 			log.Debug("base node buffer need write disk immediately")
 			return false
