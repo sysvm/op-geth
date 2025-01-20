@@ -30,6 +30,9 @@ const (
 
 	// DefaultReserveMultiDifflayerNumber defines the default reserve number of multiDifflayer in nodebufferlist.
 	DefaultReserveMultiDifflayerNumber = 3
+
+	// The max batch size of pebble cannot exceed 4GB, so set maxNodeBufferListSize to 3GB.
+	maxNodeBufferListSize = 3221225472
 )
 
 type KeepRecord struct {
@@ -225,11 +228,24 @@ func (nf *nodebufferlist) recoverNodeBufferList(freezer *rawdb.ResettableFreezer
 		nf.size += current.size
 		nf.layers += current.layers
 	}
-	nf.diffToBase(true)
+
+	log.Info("Before diffToBase", "base_size", nf.base.size, "tail_state_id", nf.tail.id, "head_state_id", nf.head.id,
+		"nbl_layers", nf.layers, "base_layers", nf.base.layers, "nf_count", nf.count, "node_buffer_size", nf.size)
+
+	if nf.size >= maxNodeBufferListSize && nf.layers == DefaultReserveMultiDifflayerNumber {
+		// avoid diff size exceeding max pebble batch size limit, force flush buffer to base
+		log.Info("node buffer size exceeds 3GB", "node buffer size", nf.size)
+		nf.diffToBase(true)
+	} else {
+		nf.diffToBase(false)
+	}
+
+	log.Info("After diffToBase", "base_size", nf.base.size, "tail_state_id", nf.tail.id,
+		"head_state_id", nf.head.id, "nbl_layers", nf.layers, "base_layers", nf.base.layers, "nf_count", nf.count, "node_buffer_size", nf.size)
 	nf.backgroundFlush()
 
 	log.Info("Succeed to recover node buffer list", "base_size", nf.base.size, "tail_state_id", nf.tail.id,
-		"head_state_id", nf.head.id, "nbl_layers", nf.layers, "base_layers", nf.base.layers)
+		"head_state_id", nf.head.id, "nbl_layers", nf.layers, "base_layers", nf.base.layers, "nf_count", nf.count, "node_buffer_size", nf.size)
 	return nil
 }
 
@@ -679,17 +695,13 @@ func (nf *nodebufferlist) traverseReverse(cb func(*multiDifflayer) bool) {
 // base node buffer, if up to limit size and flush to disk. It is called
 // periodically in the background
 func (nf *nodebufferlist) diffToBase(skipCountCheck bool) {
-	count := 0
 	commitFunc := func(buffer *multiDifflayer) bool {
 		if nf.base.size >= nf.base.limit {
 			log.Debug("base node buffer need write disk immediately")
 			return false
 		}
-		if skipCountCheck && count == 1 { // only force flush one buffer to base
-			return false
-		}
 		if !skipCountCheck {
-			// when using fast recovery, force flush one buffer to base to avoid exceeding pebble batch size limit
+			// when using fast recovery, force flush buffer to base to avoid exceeding pebble batch size limit
 			if nf.count <= nf.rsevMdNum {
 				log.Debug("node buffer list less, waiting more difflayer to be committed")
 				return false
@@ -733,7 +745,6 @@ func (nf *nodebufferlist) diffToBase(skipCountCheck bool) {
 			baseNodeBufferDifflayerAvgSize.Update(int64(nf.base.size / nf.base.layers))
 		}
 		nf.report()
-		count++
 
 		return true
 	}
