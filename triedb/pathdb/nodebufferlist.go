@@ -113,7 +113,7 @@ func newNodeBufferList(
 
 	var base *multiDifflayer
 	if nodes != nil && useBase {
-		// after using fast recovery, use ancient db to recover nbl for force kill and graceful kill.
+		// After using fast recovery, use ancient db to recover nbl for force kill and graceful kill.
 		// so this case for now is used in unit test
 		var size uint64
 		for _, subset := range nodes {
@@ -160,7 +160,7 @@ func newNodeBufferList(
 
 	go nf.loop()
 
-	log.Info("new node buffer list", "proposed block interval", nf.wpBlocks,
+	log.Info("New node buffer list", "proposed block interval", nf.wpBlocks,
 		"reserve multi diff_layers", nf.rsevMdNum, "diff_layers in multi_diff_layer", nf.dlInMd,
 		"limit", common.StorageSize(limit), "layers", layers, "persist_id", nf.persistID, "base_size", nf.size)
 	return nf, nil
@@ -197,7 +197,7 @@ func (nf *nodebufferlist) recoverNodeBufferList(freezer *rawdb.ResettableFreezer
 	if err != nil {
 		return err
 	}
-	log.Info("block intervals info", "block_intervals", blockIntervals, "state_intervals", stateIntervals,
+	log.Info("Block intervals info", "block_intervals", blockIntervals, "state_intervals", stateIntervals,
 		"start_block", startBlock, "end_block", endBlock)
 
 	var eg errgroup.Group
@@ -232,9 +232,9 @@ func (nf *nodebufferlist) recoverNodeBufferList(freezer *rawdb.ResettableFreezer
 	log.Info("Before diffToBase", "base_size", nf.base.size, "tail_state_id", nf.tail.id, "head_state_id", nf.head.id,
 		"nbl_layers", nf.layers, "base_layers", nf.base.layers, "nf_count", nf.count, "node_buffer_size", nf.size)
 
-	if nf.size >= maxNodeBufferListSize && nf.layers == DefaultReserveMultiDifflayerNumber {
-		// avoid diff size exceeding max pebble batch size limit, force flush buffer to base
-		log.Info("node buffer size exceeds 3GB", "node buffer size", nf.size)
+	if nf.size >= maxNodeBufferListSize && nf.count == DefaultReserveMultiDifflayerNumber {
+		// Avoid diff size exceeding max pebble batch size limit, force flush buffer to base
+		log.Info("Node buffer list size exceeds 3GB", "node buffer size", nf.size)
 		nf.diffToBase(true)
 	} else {
 		nf.diffToBase(false)
