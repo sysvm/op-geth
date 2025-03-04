@@ -31,6 +31,9 @@ const (
 	// DefaultReserveMultiDifflayerNumber defines the default reserve number of multiDifflayer in nodebufferlist.
 	DefaultReserveMultiDifflayerNumber = 3
 
+	// DefaultNewReserveMultiDifflayerNumber defines the default reserve number of multiDifflayer in nodebufferlist.
+	DefaultNewReserveMultiDifflayerNumber = 12
+
 	// The max batch size of pebble cannot exceed 4GB, so set maxNodeBufferListSize to 3GB.
 	maxNodeBufferListSize = 3221225472
 )
@@ -94,22 +97,25 @@ func newNodeBufferList(
 	fastRecovery bool,
 	useBase bool,
 ) (*nodebufferlist, error) {
-	var (
-		rsevMdNum uint64
-		dlInMd    uint64
-		wpBlocks  = proposeBlockInterval
-	)
-	if wpBlocks == 0 {
-		rsevMdNum = DefaultReserveMultiDifflayerNumber
-		wpBlocks = DefaultProposeBlockInterval
-		dlInMd = DefaultProposeBlockInterval / (DefaultReserveMultiDifflayerNumber - 1)
-	} else if wpBlocks%(DefaultReserveMultiDifflayerNumber-1) == 0 {
-		rsevMdNum = DefaultReserveMultiDifflayerNumber
-		dlInMd = wpBlocks / (DefaultReserveMultiDifflayerNumber - 1)
-	} else {
-		rsevMdNum = 1
-		dlInMd = wpBlocks
-	}
+	// var (
+	// 	rsevMdNum uint64
+	// 	dlInMd    uint64
+	// 	wpBlocks  = proposeBlockInterval
+	// )
+	// if wpBlocks == 0 {
+	// 	rsevMdNum = DefaultReserveMultiDifflayerNumber
+	// 	wpBlocks = DefaultProposeBlockInterval
+	// 	dlInMd = DefaultProposeBlockInterval / (DefaultReserveMultiDifflayerNumber - 1)
+	// } else if wpBlocks%(DefaultReserveMultiDifflayerNumber-1) == 0 {
+	// 	rsevMdNum = DefaultReserveMultiDifflayerNumber
+	// 	dlInMd = wpBlocks / (DefaultReserveMultiDifflayerNumber - 1)
+	// } else {
+	// 	rsevMdNum = 1
+	// 	dlInMd = wpBlocks
+	// }
+	rsevMdNum := uint64(DefaultNewReserveMultiDifflayerNumber)
+	wpBlocks := uint64(DefaultProposeBlockInterval)
+	dlInMd := uint64(DefaultProposeBlockInterval)
 
 	var base *multiDifflayer
 	if nodes != nil && useBase {
@@ -232,7 +238,7 @@ func (nf *nodebufferlist) recoverNodeBufferList(freezer *rawdb.ResettableFreezer
 	log.Info("Before diffToBase", "base_size", nf.base.size, "tail_state_id", nf.tail.id, "head_state_id", nf.head.id,
 		"nbl_layers", nf.layers, "base_layers", nf.base.layers, "nf_count", nf.count, "node_buffer_size", nf.size)
 
-	if nf.size >= maxNodeBufferListSize && nf.count == DefaultReserveMultiDifflayerNumber {
+	if nf.size >= maxNodeBufferListSize && nf.count == DefaultNewReserveMultiDifflayerNumber {
 		// Avoid diff size exceeding max pebble batch size limit, force flush buffer to base
 		log.Info("Node buffer list size exceeds 3GB", "node buffer size", nf.size)
 		nf.diffToBase(true)
