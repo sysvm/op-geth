@@ -26,7 +26,7 @@ const (
 	mergeMultiDifflayerInterval = 3
 
 	// DefaultProposeBlockInterval defines the interval of op-proposer proposes block.
-	DefaultProposeBlockInterval = 3600
+	DefaultProposeBlockInterval = 240
 
 	// DefaultReserveMultiDifflayerNumber defines the default reserve number of multiDifflayer in nodebufferlist.
 	DefaultReserveMultiDifflayerNumber = 3
