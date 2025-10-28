@@ -20,12 +20,13 @@ package types
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/holiman/uint256"
 	"io"
 	"math/big"
 	"reflect"
 	"sync/atomic"
 	"time"
+
+	"github.com/holiman/uint256"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -33,8 +34,8 @@ import (
 )
 
 var (
-	OldBlockMillisecondsInterval uint64 = 1000
-	NewBlockMillisecondsInterval uint64 = 500
+	DefaultBlockIntervalUintCount uint64 = 2
+	BlockMillisecondsIntervalUint uint64 = 250
 )
 
 // A BlockNonce is a 64-bit hash which proves (combined with the
@@ -126,10 +127,23 @@ func (h *Header) millisecondes() uint64 {
 func (h *Header) MilliTimestamp() uint64 { return h.Time*1000 + h.millisecondes() }
 
 func (h *Header) NextMilliTimestamp() uint64 {
+	return h.MilliTimestamp() + h.BlockMillisecondTime()
+}
+
+func (h *Header) BlockMillisecondTimeUnit() uint64 {
 	if h.MixDigest == (common.Hash{}) {
-		return h.Time*1000 + OldBlockMillisecondsInterval
+		return DefaultBlockIntervalUintCount
 	}
-	return h.MilliTimestamp() + NewBlockMillisecondsInterval
+
+	count := uint64(h.MixDigest[3])
+	if count != 0 {
+		return count
+	}
+	return DefaultBlockIntervalUintCount
+}
+
+func (h *Header) BlockMillisecondTime() uint64 {
+	return h.BlockMillisecondTimeUnit() * BlockMillisecondsIntervalUint
 }
 
 func (h *Header) NextSecondsTimestamp() uint64 { return h.NextMilliTimestamp() / 1000 }
