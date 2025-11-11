@@ -134,6 +134,17 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		config.Miner.GasPrice = new(big.Int).Set(ethconfig.Defaults.Miner.GasPrice)
 	}
 
+	// Assemble the Ethereum object
+	chainDb, err := stack.OpenAndMergeDatabase("chaindata", ChainDBNamespace, false, config.DatabaseCache, config.DatabaseHandles,
+		config.DatabaseFreezer)
+	if err != nil {
+		return nil, err
+	}
+	config.StateScheme, err = rawdb.ParseStateScheme(config.StateScheme, chainDb)
+	if err != nil {
+		return nil, err
+	}
+
 	if config.StateScheme == rawdb.HashScheme && config.NoPruning && config.TrieDirtyCache > 0 {
 		if config.SnapshotCache > 0 {
 			config.TrieCleanCache += config.TrieDirtyCache * 3 / 5
@@ -158,16 +169,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		"trie_clean_cache", common.StorageSize(config.TrieCleanCache)*1024*1024,
 		"trie_dirty_cache", common.StorageSize(config.TrieDirtyCache)*1024*1024,
 		"snapshot_cache", common.StorageSize(config.SnapshotCache)*1024*1024)
-	// Assemble the Ethereum object
-	chainDb, err := stack.OpenAndMergeDatabase("chaindata", ChainDBNamespace, false, config.DatabaseCache, config.DatabaseHandles,
-		config.DatabaseFreezer)
-	if err != nil {
-		return nil, err
-	}
-	config.StateScheme, err = rawdb.ParseStateScheme(config.StateScheme, chainDb)
-	if err != nil {
-		return nil, err
-	}
+
 	// Try to recover offline state pruning only in hash-based.
 	if config.StateScheme == rawdb.HashScheme {
 		if err := pruner.RecoverPruning(stack.ResolvePath(""), chainDb); err != nil {
