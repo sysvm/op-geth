@@ -470,7 +470,7 @@ func (keeper *ProofKeeper) truncateProofDataRecordHeadIfNeeded(blockID uint64) {
 			keeper.proofDataDB.Reset()
 			return
 		}
-		if proof.BlockID < blockID {
+		if proof.BlockID <= blockID {
 			truncateProofID = proof.ProofID
 			break
 		}
