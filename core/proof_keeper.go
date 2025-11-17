@@ -310,6 +310,8 @@ func (keeper *ProofKeeper) eventLoop() {
 				index := len(metaList) - 1
 				for index >= 0 {
 					m := metaList[index]
+					log.Info("Before check", "queryBlockID", queryBlockID, "m.BlockID", m.BlockID,
+						"m.KeepInterval", m.KeepInterval, "m.ProofID", m.ProofID)
 					if queryBlockID >= m.BlockID {
 						if m.KeepInterval == 0 || queryBlockID%m.KeepInterval != 0 { // check
 							log.Info("break due to keepInterval is 0 or queryBlockID%keepInterval != 0",
@@ -317,10 +319,12 @@ func (keeper *ProofKeeper) eventLoop() {
 							break
 						}
 
+						log.Info("Before getProofDataRecord", "queryBlockID", queryBlockID, "m.BlockID", m.BlockID,
+							"m.KeepInterval", m.KeepInterval, "m.ProofID", m.ProofID)
 						proofID = m.ProofID + (queryBlockID-m.BlockID)/m.KeepInterval
 						resultProofRecord = keeper.getProofDataRecord(proofID)
-						log.Info("getProofDataRecord", "resultProofRecord blockID", resultProofRecord.BlockID,
-							"resultProofRecord proofID", resultProofRecord.ProofID,
+						log.Info("After getProofDataRecord", "resultProofRecord blockID", resultProofRecord.BlockID,
+							"resultProofRecord proofID", resultProofRecord.ProofID, "calculated proofID", proofID,
 							"resultProofRecord stateRoot", resultProofRecord.StateRoot.String())
 						break
 					}
