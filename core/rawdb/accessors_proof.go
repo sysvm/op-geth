@@ -35,6 +35,7 @@ func GetLatestProofData(f *ResettableFreezer) []byte {
 	if proofTable == nil {
 		return nil
 	}
+	log.Info("GetLatestProofData in ancient db", "latest_proof_id", proofTable.items.Load()-1)
 	blob, err := f.Ancient(proposeProofTable, proofTable.items.Load()-1)
 	if err != nil {
 		log.Error("Failed to get latest proof data", "latest_proof_id", proofTable.items.Load()-1, "error", err)

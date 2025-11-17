@@ -493,10 +493,12 @@ func (keeper *ProofKeeper) truncateProofDataRecordHeadIfNeeded(blockID uint64) {
 		return
 	}
 	if blockID > latestProofDataRecord.BlockID {
-		// log.Info("Skip to truncate proof data due to block id is newer")
+		log.Info("Skip to truncate proof data due to block id is newer")
 		return
 	}
 
+	log.Info("Before truncate proof data", "blockID", blockID, "latestProofDataRecord blockID", latestProofDataRecord.BlockID,
+		"latestProofDataRecord proofID", latestProofDataRecord.ProofID)
 	truncateProofID := uint64(0)
 	proofID := latestProofDataRecord.ProofID
 	for proofID > 0 {
@@ -512,6 +514,7 @@ func (keeper *ProofKeeper) truncateProofDataRecordHeadIfNeeded(blockID uint64) {
 		proofID = proofID - 1
 	}
 	rawdb.TruncateProofDataHead(keeper.proofDataDB, truncateProofID)
+	// INFO [11-17|08:04:06.752] Succeed to truncate proof data block_id=654,000 truncate_proof_id=2715,
 	log.Info("Succeed to truncate proof data", "block_id", blockID, "truncate_proof_id", truncateProofID)
 }
 
@@ -527,7 +530,7 @@ func (keeper *ProofKeeper) getLatestProofDataRecord() *proofDataRecord {
 	if err != nil {
 		log.Crit("Failed to unmarshal proof data", "err", err)
 	}
-	// log.Info("Succeed to get latest proof data", "record", data)
+	log.Info("Succeed to get latest proof data", "ProofID", data.ProofID, "blockID", data.BlockID, "stateRoot", data.StateRoot.String())
 	return &data
 }
 
