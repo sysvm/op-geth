@@ -193,7 +193,7 @@ func (keeper *ProofKeeper) getInnerProof(kRecord *pathdb.KeepRecord) (*proofData
 	startTimestamp := time.Now()
 	defer func() {
 		getInnerProofTimer.UpdateSince(startTimestamp)
-		// log.Info("Succeed to get proof", "proof_record", pRecord, "error", err, "elapsed", common.PrettyDuration(time.Since(startTimestamp)))
+		log.Info("Succeed to get proof", "proof_record", pRecord, "error", err, "elapsed", common.PrettyDuration(time.Since(startTimestamp)))
 	}()
 
 	if header = keeper.blockChain.GetHeaderByNumber(kRecord.BlockID); header == nil {
@@ -250,34 +250,31 @@ func (keeper *ProofKeeper) eventLoop() {
 				proofRecord      *proofDataRecord
 			)
 
+			log.Info("Before getInnerProof", "keepRecord blockID", keepRecord.BlockID, "keepRecord stateRoot", keepRecord.StateRoot.String(),
+				"keepRecord KeepInterval", keepRecord.KeepInterval)
 			proofRecord, err = keeper.getInnerProof(keepRecord)
-			// proofRecord = &proofDataRecord{
-			// 	ProofID:      0,
-			// 	BlockID:      keepRecord.BlockID,
-			// 	StateRoot:    keepRecord.StateRoot,
-			// 	Address:      common.Address{},
-			// 	AccountProof: nil,
-			// 	Balance:      nil,
-			// 	CodeHash:     common.Hash{},
-			// 	Nonce:        0,
-			// 	StorageHash:  common.Hash{},
-			// 	StorageProof: nil,
-			// }
 			if err == nil {
 				hasTruncatedMeta = keeper.truncateKeeperMetaRecordHeadIfNeeded(keepRecord.BlockID)
 				metaList := keeper.getKeeperMetaRecordList()
 				if len(metaList) == 0 {
 					keeper.proofDataDB.Reset()
 					curProofID = ancientInitSequenceID
+					log.Info("metaList is empty", "ancientInitSequenceID", ancientInitSequenceID, "curProofID", curProofID)
 				} else {
 					keeper.truncateProofDataRecordHeadIfNeeded(keepRecord.BlockID)
 					latestProofData := keeper.getLatestProofDataRecord()
 					if latestProofData != nil {
 						curProofID = latestProofData.ProofID + 1
+						log.Info("latestProofData is not nil", "latestProofData blockID", latestProofData.BlockID,
+							"latestProofData proofID", latestProofData.ProofID, "curProofID", curProofID)
 					} else {
+						log.Info("latestProofData is nil", "ancientInitSequenceID", ancientInitSequenceID, "curProofID", curProofID)
 						curProofID = ancientInitSequenceID
 					}
 				}
+
+				// INFO [11-17|02:44:07.967] hasTruncatedMeta "keep record block id"=615,600 ancientInitSequenceID=0 hasTruncatedMeta=false
+				// putKeeperMetaRecordOnce=false curProofID=2557,
 
 				log.Info("hasTruncatedMeta", "keep record block id", keepRecord.BlockID, "ancientInitSequenceID", ancientInitSequenceID,
 					"hasTruncatedMeta", hasTruncatedMeta, "putKeeperMetaRecordOnce", putKeeperMetaRecordOnce, "curProofID", curProofID)
@@ -311,7 +308,7 @@ func (keeper *ProofKeeper) eventLoop() {
 				for index >= 0 {
 					m := metaList[index]
 					log.Info("Before check", "queryBlockID", queryBlockID, "m.BlockID", m.BlockID,
-						"m.KeepInterval", m.KeepInterval, "m.ProofID", m.ProofID)
+						"m.KeepInterval", m.KeepInterval, "m.ProofID", m.ProofID, "index", index)
 					if queryBlockID >= m.BlockID {
 						if m.KeepInterval == 0 || queryBlockID%m.KeepInterval != 0 { // check
 							log.Info("break due to keepInterval is 0 or queryBlockID%keepInterval != 0",
@@ -319,10 +316,13 @@ func (keeper *ProofKeeper) eventLoop() {
 							break
 						}
 
+						// INFO [11-17|06:46:50.341] Before getProofDataRecord queryBlockID=596,880 m.BlockID=240 m.KeepInterval=240 m.ProofID=0,
 						log.Info("Before getProofDataRecord", "queryBlockID", queryBlockID, "m.BlockID", m.BlockID,
 							"m.KeepInterval", m.KeepInterval, "m.ProofID", m.ProofID)
 						proofID = m.ProofID + (queryBlockID-m.BlockID)/m.KeepInterval
 						resultProofRecord = keeper.getProofDataRecord(proofID)
+						// INFO [11-17|06:46:50.342] After getProofDataRecord "resultProofRecord blockID"=598,320 "resultProofRecord proofID"=2486
+						// "calculated proofID"=2486 "resultProofRecord stateRoot"=0x016502d2d09574a4cb8471c1a276bbffc1eb1fedaee98b1943b3279ff6b0dec0,
 						log.Info("After getProofDataRecord", "resultProofRecord blockID", resultProofRecord.BlockID,
 							"resultProofRecord proofID", resultProofRecord.ProofID, "calculated proofID", proofID,
 							"resultProofRecord stateRoot", resultProofRecord.StateRoot.String())
@@ -555,7 +555,8 @@ func (keeper *ProofKeeper) putProofDataRecord(p *proofDataRecord) error {
 		return err
 	}
 	err = rawdb.PutProofData(keeper.proofDataDB, p.ProofID, proof)
-	// log.Info("Succeed to put proof data", "record", p, "error", err)
+	log.Info("Succeed to put proof data", "record", p, "error", err, "proofID", p.ProofID, "blockID", p.BlockID,
+		"stateRoot", p.StateRoot.String())
 	return err
 }
 
