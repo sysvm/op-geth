@@ -251,6 +251,18 @@ func (keeper *ProofKeeper) eventLoop() {
 			)
 
 			proofRecord, err = keeper.getInnerProof(keepRecord)
+			// proofRecord = &proofDataRecord{
+			// 	ProofID:      0,
+			// 	BlockID:      keepRecord.BlockID,
+			// 	StateRoot:    keepRecord.StateRoot,
+			// 	Address:      common.Address{},
+			// 	AccountProof: nil,
+			// 	Balance:      nil,
+			// 	CodeHash:     common.Hash{},
+			// 	Nonce:        0,
+			// 	StorageHash:  common.Hash{},
+			// 	StorageProof: nil,
+			// }
 			if err == nil {
 				hasTruncatedMeta = keeper.truncateKeeperMetaRecordHeadIfNeeded(keepRecord.BlockID)
 				metaList := keeper.getKeeperMetaRecordList()
@@ -267,7 +279,10 @@ func (keeper *ProofKeeper) eventLoop() {
 					}
 				}
 
+				log.Info("hasTruncatedMeta", "keep record block id", keepRecord.BlockID, "ancientInitSequenceID", ancientInitSequenceID,
+					"hasTruncatedMeta", hasTruncatedMeta, "putKeeperMetaRecordOnce", putKeeperMetaRecordOnce, "curProofID", curProofID)
 				if hasTruncatedMeta || !putKeeperMetaRecordOnce {
+					log.Info("putKeeperMetaRecord", "blockID", keepRecord.BlockID, "proofID", curProofID, "keepInterval", keepRecord.KeepInterval)
 					putKeeperMetaRecordOnce = true
 					keeper.putKeeperMetaRecord(&keeperMetaRecord{
 						BlockID:      keepRecord.BlockID,
@@ -279,11 +294,17 @@ func (keeper *ProofKeeper) eventLoop() {
 				err = keeper.putProofDataRecord(proofRecord)
 				keeper.latestBlockID = keepRecord.BlockID
 			}
+			log.Info("notifyFinishKeepCh", "err", err)
 			keeper.opts.notifyFinishKeepCh <- err
 
 		case queryBlockID := <-keeper.queryProofCh:
 			var resultProofRecord *proofDataRecord
 			metaList := keeper.getKeeperMetaRecordList()
+			metaListLen := len(metaList)
+			log.Info("metaList info", "length", metaListLen, "queryBlockID", queryBlockID, "keeper.latestBlockID", keeper.latestBlockID,
+				"keeper.opts.keepProofBlockSpan", keeper.opts.keepProofBlockSpan)
+			log.Info("the latest metaList", "BlockID", metaList[metaListLen-1].BlockID, "proofID", metaList[metaListLen-1].ProofID,
+				"keepInterval", metaList[metaListLen-1].KeepInterval)
 			if len(metaList) != 0 && (queryBlockID+keeper.opts.keepProofBlockSpan > keeper.latestBlockID) {
 				proofID := uint64(0)
 				index := len(metaList) - 1
@@ -291,15 +312,25 @@ func (keeper *ProofKeeper) eventLoop() {
 					m := metaList[index]
 					if queryBlockID >= m.BlockID {
 						if m.KeepInterval == 0 || queryBlockID%m.KeepInterval != 0 { // check
+							log.Info("break due to keepInterval is 0 or queryBlockID%keepInterval != 0",
+								"queryBlockID", queryBlockID, "keepInterval", m.KeepInterval)
 							break
 						}
 
 						proofID = m.ProofID + (queryBlockID-m.BlockID)/m.KeepInterval
 						resultProofRecord = keeper.getProofDataRecord(proofID)
+						log.Info("getProofDataRecord", "resultProofRecord blockID", resultProofRecord.BlockID,
+							"resultProofRecord proofID", resultProofRecord.ProofID,
+							"resultProofRecord stateRoot", resultProofRecord.StateRoot.String())
 						break
 					}
 					index = index - 1
 				}
+			}
+			if resultProofRecord != nil {
+				log.Info("resultProofRecord", "resultProofRecord blockID", resultProofRecord.BlockID,
+					"resultProofRecord proofID", resultProofRecord.ProofID,
+					"resultProofRecord stateRoot", resultProofRecord.StateRoot.String())
 			}
 			keeper.waitQueryProofCh <- resultProofRecord
 
