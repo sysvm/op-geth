@@ -22,6 +22,7 @@ ghcr.io/bnb-chain/op-geth:v0.5.9
 
 **Full Changelog**: https://github.com/bnb-chain/op-geth/compare/v0.5.8...v0.5.9
 
+
 ## v0.5.8
 
 This release introduces the implementation of Fourier Hardfork, effectively reducing the block time from 500 milliseconds to an impressive 250 milliseconds.
